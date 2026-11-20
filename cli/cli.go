@@ -73,6 +73,10 @@ type Options struct {
 	Targets func() (*targets.File, error)
 	// TargetsPath is --targets's default when Targets is nil.
 	TargetsPath string
+	// ReviewsPath is the review command's --reviews default.
+	ReviewsPath string
+	// Title heads the review page.
+	Title string
 	// Connector replaces the connections the targets file describes; tests
 	// set it.
 	Connector func(*targets.File) credforge.Connector
@@ -85,7 +89,7 @@ type env struct {
 	targets  string
 }
 
-// New returns the command tree: check and schema.
+// New returns the command tree: check, review and schema.
 func New(o Options) *cobra.Command {
 	if o.Use == "" {
 		o.Use = "credforge"
@@ -96,7 +100,7 @@ func New(o Options) *cobra.Command {
 	e := &env{opts: o.withDefaults()}
 	cmd := &cobra.Command{Use: o.Use, Short: o.Short, SilenceUsage: true, SilenceErrors: true}
 	e.flags(cmd.PersistentFlags())
-	cmd.AddCommand(e.check(), e.schema())
+	cmd.AddCommand(e.check(), e.review(), e.schema())
 	return cmd
 }
 
@@ -112,6 +116,15 @@ func Check(o Options) *cobra.Command {
 	return cmd
 }
 
+// Review returns the review command alone, with the same file flags as
+// Check, for a host tool's own command tree. Use and Short are ignored.
+func Review(o Options) *cobra.Command {
+	e := &env{opts: o.withDefaults()}
+	cmd := e.review()
+	e.flags(cmd.Flags())
+	return cmd
+}
+
 // withDefaults fills the empty paths and the connector.
 func (o Options) withDefaults() Options {
 	if o.RegistryPath == "" {
@@ -122,6 +135,9 @@ func (o Options) withDefaults() Options {
 	}
 	if o.TargetsPath == "" {
 		o.TargetsPath = "targets.json"
+	}
+	if o.ReviewsPath == "" {
+		o.ReviewsPath = "reviews.json"
 	}
 	if o.Connector == nil {
 		o.Connector = func(f *targets.File) credforge.Connector { return NewConnector(f) }
@@ -141,34 +157,57 @@ func (e *env) flags(fs *pflag.FlagSet) {
 }
 
 func (e *env) load() (*credspec.Registry, *credspec.Log, *targets.File, error) {
-	var reg *credspec.Registry
-	var err error
-	if e.opts.Registry != nil {
-		if reg, err = e.opts.Registry(); err != nil {
-			return nil, nil, nil, err
-		}
-		if err := reg.Validate(); err != nil {
-			return nil, nil, nil, fmt.Errorf("registry: %w", err)
-		}
-	} else if reg, err = credspec.LoadRegistry(e.registry); err != nil {
+	reg, err := e.loadRegistry()
+	if err != nil {
 		return nil, nil, nil, err
 	}
 	log, err := credspec.LoadLog(e.events, reg)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	var tf *targets.File
-	if e.opts.Targets != nil {
-		if tf, err = e.opts.Targets(); err == nil {
-			err = tf.Validate()
-		}
-	} else {
-		tf, err = targets.Load(e.targets)
-	}
+	tf, err := e.loadTargets()
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	return reg, log, tf, nil
+}
+
+func (e *env) loadRegistry() (*credspec.Registry, error) {
+	if e.opts.Registry == nil {
+		return credspec.LoadRegistry(e.registry)
+	}
+	reg, err := e.opts.Registry()
+	if err != nil {
+		return nil, err
+	}
+	if err := reg.Validate(); err != nil {
+		return nil, fmt.Errorf("registry: %w", err)
+	}
+	return reg, nil
+}
+
+func (e *env) loadTargets() (*targets.File, error) {
+	if e.opts.Targets == nil {
+		return targets.Load(e.targets)
+	}
+	tf, err := e.opts.Targets()
+	if err != nil {
+		return nil, err
+	}
+	if err := tf.Validate(); err != nil {
+		return nil, err
+	}
+	return tf, nil
+}
+
+// checker returns a Checker over the connections tf describes, scanning
+// its extra repositories.
+func (e *env) checker(tf *targets.File) *credforge.Checker {
+	ch := &credforge.Checker{Connector: e.opts.Connector(tf)}
+	if len(tf.Scan.GitHubRepositories) > 0 {
+		ch.Extra = map[string][]string{github.StoreType: tf.Scan.GitHubRepositories}
+	}
+	return ch
 }
 
 func (e *env) check() *cobra.Command {
@@ -214,11 +253,7 @@ func (e *env) check() *cobra.Command {
 					return err == nil && ok
 				}
 			}
-			ch := &credforge.Checker{Connector: e.opts.Connector(tf)}
-			if len(tf.Scan.GitHubRepositories) > 0 {
-				ch.Extra = map[string][]string{github.StoreType: tf.Scan.GitHubRepositories}
-			}
-			rep, err := ch.Check(c.Context(), reg, log, opts)
+			rep, err := e.checker(tf).Check(c.Context(), reg, log, opts)
 			if err != nil {
 				return err
 			}
