@@ -1,0 +1,89 @@
+{
+  "irVersion": "1.0",
+  "project": "credforge",
+  "repository": "https://github.com/plexusone/credforge",
+  "versioning": "semver",
+  "commitConvention": "conventional",
+  "maintainers": [
+    "plexusone"
+  ],
+  "releases": [
+    {
+      "version": "v0.1.0",
+      "date": "2026-11-20",
+      "highlights": [
+        {
+          "description": "Check a systemspec-credential registry and its event log against the stores and consumers it names, reporting each store as missing, stale, unregistered, changed, unrecorded, unlisted, unobserved or present"
+        },
+        {
+          "description": "No value is ever read: observers list names and when each was last set, and no type has a field for a value"
+        },
+        {
+          "description": "Read-only: installing and rotating values through OmniVault providers follows"
+        }
+      ],
+      "added": [
+        {
+          "description": "`Compare`, a pure comparison of a registry, its event log and what was observed, with a grace for events recorded after the change, and `Check`, which derives the scopes to list from the registry",
+          "rmis": [
+            "RMI-CREDFORGE-001"
+          ],
+          "commit": "33ccbda"
+        },
+        {
+          "description": "`Record`, which logs unrecorded stores as `created` and changed ones as `deployed` at the store's time, never editing the registry",
+          "rmis": [
+            "RMI-CREDFORGE-002"
+          ],
+          "commit": "b0c96ad"
+        },
+        {
+          "description": "Targets file binding store types and accounts to connections, with a JSON Schema generated from the Go types",
+          "rmis": [
+            "RMI-CREDFORGE-003"
+          ],
+          "commit": "ae08bae"
+        },
+        {
+          "description": "GitHub observers: a repository's Actions secret names and when each was set, and its workflows' `secrets.NAME` references",
+          "rmis": [
+            "RMI-CREDFORGE-004"
+          ],
+          "commit": "f81a351"
+        },
+        {
+          "description": "AWS Systems Manager Parameter Store observer: names and last change with `DescribeParameters`, one directory level at a time",
+          "rmis": [
+            "RMI-CREDFORGE-005"
+          ],
+          "commit": "39b1cc2"
+        },
+        {
+          "description": "`credforge check` with text and JSON output, `--record`, `--fail-on`, `--only` and `--include-planned`, `credforge schema targets`, and `cli.New` for mounting in a host tool",
+          "rmis": [
+            "RMI-CREDFORGE-006"
+          ],
+          "commit": "944945b"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Product and technical requirements, plan and roadmap for INIT-CREDFORGE-001",
+          "commit": "1e888dc"
+        },
+        {
+          "description": "README, documentation site and v0.1.0 release notes"
+        }
+      ],
+      "infrastructure": [
+        {
+          "description": "CI, lint and CodeQL workflows and lint configuration",
+          "commit": "86e1bbd"
+        },
+        {
+          "description": "Keep LF line endings on every platform, so the generated targets schema matches its source on Windows"
+        }
+      ]
+    }
+  ]
+}
