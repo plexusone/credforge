@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/plexusone/systemspec-credential/credspec"
+	"github.com/spf13/cobra"
 
 	"github.com/plexusone/credforge"
 	"github.com/plexusone/credforge/awsssm"
@@ -274,5 +275,58 @@ func TestCode(t *testing.T) {
 	if Code(nil) != 0 || Code(fmt.Errorf("x")) != ExitError ||
 		Code(fmt.Errorf("wrapped: %w", &ExitCodeError{Code: ExitFindings, Err: fmt.Errorf("y")})) != ExitFindings {
 		t.Fatal("Code")
+	}
+}
+
+// TestCheckMounted mounts Check under a parent that has its own --events
+// flag, as systemspec-credential's command tree does, and checks that the
+// command reads and records in the file its own flag names.
+func TestCheckMounted(t *testing.T) {
+	srv := githubServer(t)
+	defer srv.Close()
+	dir := fixture(t, srv.URL)
+	t.Setenv("TEST_GITHUB_TOKEN", "test-token")
+
+	var parentEvents string
+	parent := &cobra.Command{Use: "credentials", SilenceUsage: true, SilenceErrors: true}
+	parent.PersistentFlags().StringVar(&parentEvents, "events", "unused.json", "the parent's event log")
+	reg, err := credspec.LoadRegistry(filepath.Join(dir, "credentials.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tf, err := targets.Load(filepath.Join(dir, "targets.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent.AddCommand(Check(Options{
+		Registry: func() (*credspec.Registry, error) { return reg, nil },
+		Targets:  func() (*targets.File, error) { return tf, nil },
+		Connector: func(f *targets.File) credforge.Connector {
+			c := NewConnector(f)
+			c.HTTP = srv.Client()
+			c.newAWS = func(context.Context, string, string) (*awsssm.Observer, error) {
+				return &awsssm.Observer{API: fakeSSM{}}, nil
+			}
+			return c
+		},
+	}))
+	var out bytes.Buffer
+	parent.SetOut(&out)
+	parent.SetErr(&out)
+	events := filepath.Join(dir, "events.json")
+	parent.SetArgs([]string{"check", "--events", events, "--record", "--fail-on", ""})
+	if err := parent.ExecuteContext(context.Background()); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "recorded 1 event(s) in "+events) {
+		t.Fatalf("output = %q", out.String())
+	}
+	for _, f := range []string{"--registry", "--targets"} {
+		if strings.Contains(Check(Options{
+			Registry: func() (*credspec.Registry, error) { return reg, nil },
+			Targets:  func() (*targets.File, error) { return tf, nil },
+		}).Flags().FlagUsages(), f) {
+			t.Errorf("Check has %s although the host supplies it", f)
+		}
 	}
 }

@@ -16,6 +16,7 @@ import (
 
 	"github.com/plexusone/systemspec-credential/credspec"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/plexusone/credforge"
 	"github.com/plexusone/credforge/awsssm"
@@ -92,6 +93,27 @@ func New(o Options) *cobra.Command {
 	if o.Short == "" {
 		o.Short = "Compare a credential registry with the stores and workflows it names, without reading any value"
 	}
+	e := &env{opts: o.withDefaults()}
+	cmd := &cobra.Command{Use: o.Use, Short: o.Short, SilenceUsage: true, SilenceErrors: true}
+	e.flags(cmd.PersistentFlags())
+	cmd.AddCommand(e.check(), e.schema())
+	return cmd
+}
+
+// Check returns the check command alone, with its own --registry (when
+// Options.Registry is nil), --events and --targets (when Options.Targets
+// is nil) flags, for a host tool to add to a command tree of its own, such
+// as beside systemspec-credential's commands. Its flags take precedence
+// over a parent's flags of the same names. Use and Short are ignored.
+func Check(o Options) *cobra.Command {
+	e := &env{opts: o.withDefaults()}
+	cmd := e.check()
+	e.flags(cmd.Flags())
+	return cmd
+}
+
+// withDefaults fills the empty paths and the connector.
+func (o Options) withDefaults() Options {
 	if o.RegistryPath == "" {
 		o.RegistryPath = "credentials.json"
 	}
@@ -104,17 +126,18 @@ func New(o Options) *cobra.Command {
 	if o.Connector == nil {
 		o.Connector = func(f *targets.File) credforge.Connector { return NewConnector(f) }
 	}
-	e := &env{opts: o}
-	cmd := &cobra.Command{Use: o.Use, Short: o.Short, SilenceUsage: true, SilenceErrors: true}
-	if o.Registry == nil {
-		cmd.PersistentFlags().StringVar(&e.registry, "registry", o.RegistryPath, "the registry file (JSON)")
+	return o
+}
+
+// flags defines the file flags on fs.
+func (e *env) flags(fs *pflag.FlagSet) {
+	if e.opts.Registry == nil {
+		fs.StringVar(&e.registry, "registry", e.opts.RegistryPath, "the registry file (JSON)")
 	}
-	cmd.PersistentFlags().StringVar(&e.events, "events", o.EventsPath, "the event log file (JSON); missing means no events yet")
-	if o.Targets == nil {
-		cmd.PersistentFlags().StringVar(&e.targets, "targets", o.TargetsPath, "the targets file (JSON): how each store is reached")
+	fs.StringVar(&e.events, "events", e.opts.EventsPath, "the event log file (JSON); missing means no events yet")
+	if e.opts.Targets == nil {
+		fs.StringVar(&e.targets, "targets", e.opts.TargetsPath, "the targets file (JSON): how each store is reached")
 	}
-	cmd.AddCommand(e.check(), e.schema())
-	return cmd
 }
 
 func (e *env) load() (*credspec.Registry, *credspec.Log, *targets.File, error) {

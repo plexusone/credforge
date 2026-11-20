@@ -10,6 +10,7 @@ require (
 	github.com/invopop/jsonschema v0.14.0
 	github.com/plexusone/systemspec-credential v0.1.0
 	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.1.0
 )
 
 require (
@@ -30,5 +31,4 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pb33f/go-yaml v0.2.0 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.2 // indirect
-	github.com/spf13/pflag v1.1.0 // indirect
 )
