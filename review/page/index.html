@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credential Review</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='7' width='10' height='7' rx='1.5' fill='%233b6fd8'/%3E%3Cpath d='M5 7V5a3 3 0 0 1 6 0v2' stroke='%233b6fd8' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="top-title">
+    <h1 id="title">Credential Review</h1>
+    <p class="muted" id="subtitle">Loading…</p>
+  </div>
+  <div class="top-actions">
+    <span class="muted small" id="check-status"></span>
+    <button type="button" id="run-check" hidden>Run live check</button>
+  </div>
+</header>
+
+<section class="summary" id="summary" aria-label="Summary"></section>
+
+<section class="filters" aria-label="Filters">
+  <input type="search" id="q" placeholder="Search ID, name, path, consumer, note…" autocomplete="off" aria-label="Search">
+  <div class="filter-selects" id="filter-selects"></div>
+  <button type="button" class="link" id="clear-filters">Clear filters</button>
+</section>
+
+<main class="layout">
+  <section class="list" aria-label="Credentials">
+    <p class="muted small" id="count"></p>
+    <div class="table-wrap">
+      <table id="table">
+        <thead>
+          <tr>
+            <th scope="col">Credential</th>
+            <th scope="col">System</th>
+            <th scope="col">Env</th>
+            <th scope="col">Status</th>
+            <th scope="col">Log</th>
+            <th scope="col">Stores</th>
+            <th scope="col">Live</th>
+            <th scope="col">Review</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+  <aside class="detail" id="detail" aria-label="Details" hidden></aside>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
