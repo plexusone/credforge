@@ -6,16 +6,16 @@ Phases group the work; each phase's status follows from its items.
 
 ## Phase 1: Observe and compare (read-only)
 
-The first public release, v0.1.0.
+Released in v0.1.0.
 
 | ID | Item | Status |
 |---|---|---|
-| RMI-CREDFORGE-001 | Core model: keys, scopes, observations, references, findings, and `Compare` with every rule | planned |
-| RMI-CREDFORGE-002 | `Record`: log unrecorded stores as `created` and changed stores as `deployed` | planned |
-| RMI-CREDFORGE-003 | Targets file: bindings from store type and account to connections, with a generated schema | planned |
-| RMI-CREDFORGE-004 | GitHub observers: Actions repository secrets and workflow `secrets.NAME` references | planned |
-| RMI-CREDFORGE-005 | AWS SSM observer: parameter names and last change, one level per directory | planned |
-| RMI-CREDFORGE-006 | `credforge check` and the embeddable command tree, with `--record`, `--fail-on` and JSON output | planned |
+| RMI-CREDFORGE-001 | Core model: keys, scopes, observations, references, findings, and `Compare` with every rule | done |
+| RMI-CREDFORGE-002 | `Record`: log unrecorded stores as `created` and changed stores as `deployed` | done |
+| RMI-CREDFORGE-003 | Targets file: bindings from store type and account to connections, with a generated schema | done |
+| RMI-CREDFORGE-004 | GitHub observers: Actions repository secrets and workflow `secrets.NAME` references | done |
+| RMI-CREDFORGE-005 | AWS SSM observer: parameter names and last change, one level per directory | done |
+| RMI-CREDFORGE-006 | `credforge check` and the embeddable command tree, with `--record`, `--fail-on` and JSON output | done |
 
 ## Phase 2: More of the world
 
@@ -24,6 +24,7 @@ The first public release, v0.1.0.
 | RMI-CREDFORGE-007 | GitHub organization and environment secrets, with an organization secret's selected repositories | planned |
 | RMI-CREDFORGE-008 | Issuer observations: fine-grained tokens granted to an organization, their expiry and repositories, against entitlements | planned |
 | RMI-CREDFORGE-009 | A scheduled check in CI, with the report as an artifact | planned |
+| RMI-CREDFORGE-016 | `cli.Check`: the check command alone, for a host tool's own command tree | done |
 
 ## Phase 3: Install and rotate
 

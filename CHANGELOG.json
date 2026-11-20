@@ -9,6 +9,29 @@
   ],
   "releases": [
     {
+      "version": "v0.2.0",
+      "date": "2026-11-20",
+      "highlights": [
+        {
+          "description": "`cli.Check` mounts the check command alone in a host tool's command tree, beside systemspec-credential's commands"
+        }
+      ],
+      "added": [
+        {
+          "description": "`cli.Check`, the check command with its own `--registry`, `--events` and `--targets` flags, which take precedence over a parent's flags of the same names",
+          "rmis": [
+            "RMI-CREDFORGE-016"
+          ],
+          "commit": "64812ec"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "README shows mounting `cli.Check`; the roadmap marks Phase 1 done"
+        }
+      ]
+    },
+    {
       "version": "v0.1.0",
       "date": "2026-11-20",
       "highlights": [

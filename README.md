@@ -110,8 +110,9 @@ something is, and 2 on an error.
 
 ## In Go
 
-The comparison is a pure function, and the command tree mounts in a host
-tool that builds its registry in Go:
+The comparison is a pure function, and the commands mount in a host tool
+that builds its registry in Go: `cli.New` as a command tree of its own, or
+`cli.Check` as one command beside the host's, such as systemspec-credential's:
 
 ```go
 cmd := cli.New(cli.Options{
@@ -119,6 +120,8 @@ cmd := cli.New(cli.Options{
     Registry: buildRegistry,                       // func() (*credspec.Registry, error)
     Targets:  func() (*targets.File, error) { return myTargets, nil },
 })
+
+credentials.AddCommand(cli.Check(cli.Options{Registry: buildRegistry, Targets: buildTargets}))
 ```
 
 ```go
