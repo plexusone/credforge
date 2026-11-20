@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/plexusone/credforge/review/reviews.schema.json",
+  "$ref": "#/$defs/File",
+  "$defs": {
+    "File": {
+      "properties": {
+        "$schema": {
+          "type": "string",
+          "description": "Schema is the JSON Schema's URL, for editors."
+        },
+        "formatVersion": {
+          "type": "string",
+          "description": "FormatVersion is the file format's version: \"1\"."
+        },
+        "reviews": {
+          "items": {
+            "$ref": "#/$defs/Review"
+          },
+          "type": "array",
+          "description": "Reviews are the decisions, one per subject, ordered by subject."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "formatVersion",
+        "reviews"
+      ],
+      "description": "File is a reviews file."
+    },
+    "Review": {
+      "properties": {
+        "subject": {
+          "type": "string",
+          "description": "Subject is a credential's ID, or a store key (type:account:path) for\na store no credential names."
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "change",
+            "remove"
+          ],
+          "description": "Decision is the verdict."
+        },
+        "note": {
+          "type": "string",
+          "description": "Note says what to change, or why."
+        },
+        "by": {
+          "type": "string",
+          "description": "By is who decided."
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "At is when."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "subject",
+        "decision",
+        "at"
+      ],
+      "description": "Review is the latest decision on one subject."
+    }
+  },
+  "title": "credforge reviews",
+  "description": "Review decisions on the credentials of a registry and on stores no credential names. It holds no values."
+}
