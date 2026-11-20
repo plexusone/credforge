@@ -33,7 +33,8 @@ and its event log: the secret a workflow needs that was never set, the token
 regenerated at the issuer but never updated in one repository, the value
 changed with nothing recorded.
 
-> **Status:** v0.1.0 checks and records; it never writes a value. Installing
+> **Status:** v0.3.0 checks, records and serves a review page; it never
+> writes a value. Installing
 > and rotating values through [OmniVault](https://github.com/plexusone/omnivault)
 > providers follows. See the
 > [roadmap](docs/specs/initiatives/INIT-CREDFORGE-001/ROADMAP.md).
@@ -101,6 +102,30 @@ unlisted      -              aws-ssm:hosting:/app/prod/OLD                no cre
 The exit status is 0 when nothing is in a `--fail-on` state, 1 when
 something is, and 2 on an error.
 
+## Review
+
+`credforge review` serves a page on this machine for reviewing every
+credential: its stores, consumers, entitlements, rotation and events, with
+filters for system, environment, status, store, sensitivity, log state,
+live state and decision. **Run live check** adds each store's state from
+the check, and lists the stores no credential names.
+
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+credforge review --registry credentials.json --events events.json --targets targets.json
+# reviewing at http://127.0.0.1:8484/
+```
+
+On each credential, or each store no credential names, record a decision
+(approved, change with a note, or remove) and log events such as
+`verified`. Decisions are saved in `reviews.json`, events in the event log;
+the registry is never written, so a change decision is applied to the
+registry's source and reviewed as a normal change. Both files hold no
+values and are meant to be committed.
+
+The page answers only on a loopback address and to same-origin requests.
+Without a targets file it works without the live check.
+
 ## Connectors
 
 | Store | What is listed | Never called |
@@ -112,7 +137,8 @@ something is, and 2 on an error.
 
 The comparison is a pure function, and the commands mount in a host tool
 that builds its registry in Go: `cli.New` as a command tree of its own, or
-`cli.Check` as one command beside the host's, such as systemspec-credential's:
+`cli.Check` and `cli.Review` as commands beside the host's, such as
+systemspec-credential's:
 
 ```go
 cmd := cli.New(cli.Options{
@@ -121,7 +147,8 @@ cmd := cli.New(cli.Options{
     Targets:  func() (*targets.File, error) { return myTargets, nil },
 })
 
-credentials.AddCommand(cli.Check(cli.Options{Registry: buildRegistry, Targets: buildTargets}))
+opts := cli.Options{Registry: buildRegistry, Targets: buildTargets, ReviewsPath: "reviews.json"}
+credentials.AddCommand(cli.Check(opts), cli.Review(opts))
 ```
 
 ```go
@@ -135,7 +162,7 @@ events, err := credforge.Record(reg, log, rep, credforge.DefaultGrace)
 
 - [Getting started](docs/getting-started.md)
 - [Specifications](docs/specs/initiatives/INIT-CREDFORGE-001/PRD.md)
-- [Releases](docs/releases/v0.1.0.md)
+- [Releases](docs/releases/v0.3.0.md)
 
 ## License
 

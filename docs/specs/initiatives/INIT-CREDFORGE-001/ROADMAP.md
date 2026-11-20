@@ -25,6 +25,7 @@ Released in v0.1.0.
 | RMI-CREDFORGE-008 | Issuer observations: fine-grained tokens granted to an organization, their expiry and repositories, against entitlements | planned |
 | RMI-CREDFORGE-009 | A scheduled check in CI, with the report as an artifact | planned |
 | RMI-CREDFORGE-016 | `cli.Check`: the check command alone, for a host tool's own command tree | done |
+| RMI-CREDFORGE-017 | Review page: a local page over the registry, event log and live check, saving review decisions and events | done |
 
 ## Phase 3: Install and rotate
 

@@ -9,6 +9,43 @@
   ],
   "releases": [
     {
+      "version": "v0.3.0",
+      "date": "2026-11-20",
+      "highlights": [
+        {
+          "description": "`credforge review` serves a local page to review every credential with its live state, and saves decisions and events"
+        }
+      ],
+      "added": [
+        {
+          "description": "Reviews file (`review.File`): one decision per credential or store key, approved, change or remove, with a generated JSON Schema",
+          "rmis": [
+            "RMI-CREDFORGE-017"
+          ],
+          "commit": "71d31dd"
+        },
+        {
+          "description": "`review.Server`: the review page and its API, answering only to a loopback Host and same-origin JSON writes",
+          "rmis": [
+            "RMI-CREDFORGE-017"
+          ],
+          "commit": "0a54d97"
+        },
+        {
+          "description": "`credforge review` and `cli.Review`, served on a loopback address only; `Options.ReviewsPath` and `Options.Title`",
+          "rmis": [
+            "RMI-CREDFORGE-017"
+          ],
+          "commit": "fba577f"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "README describes the review page and mounting `cli.Review`"
+        }
+      ]
+    },
+    {
       "version": "v0.2.0",
       "date": "2026-11-20",
       "highlights": [
