@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/plexusone/credforge/targets/targets.schema.json",
+  "$ref": "#/$defs/File",
+  "$defs": {
+    "AWS": {
+      "properties": {
+        "profile": {
+          "type": "string",
+          "description": "Profile is the shared configuration profile; the default chain's\nwhen empty."
+        },
+        "region": {
+          "type": "string",
+          "description": "Region is the region; the profile's when empty."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "AWS is how an AWS account is reached."
+    },
+    "Binding": {
+      "properties": {
+        "store": {
+          "type": "string",
+          "description": "Store is the registry's store type, such as github-actions or aws-ssm."
+        },
+        "account": {
+          "type": "string",
+          "description": "Account matches the registry store's account exactly, or as a\npath.Match pattern such as \"example-org/*\"; \"*\" matches any account,\nincluding an empty one."
+        },
+        "github": {
+          "$ref": "#/$defs/GitHub",
+          "description": "GitHub connects github-actions stores."
+        },
+        "aws": {
+          "$ref": "#/$defs/AWS",
+          "description": "AWS connects aws-ssm stores."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "store",
+        "account"
+      ],
+      "description": "Binding connects the stores of one type in matching accounts."
+    },
+    "File": {
+      "properties": {
+        "$schema": {
+          "type": "string",
+          "description": "Schema is the JSON Schema's URL, for editors."
+        },
+        "formatVersion": {
+          "type": "string",
+          "description": "FormatVersion is the file format's version: \"1\"."
+        },
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/Binding"
+          },
+          "type": "array",
+          "description": "Bindings say how each store is reached. The first whose store type\nand account match a registry store applies."
+        },
+        "scan": {
+          "$ref": "#/$defs/Scan",
+          "description": "Scan lists accounts to check beyond those the registry names."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "formatVersion",
+        "bindings"
+      ],
+      "description": "File is a targets file."
+    },
+    "GitHub": {
+      "properties": {
+        "tokenEnv": {
+          "type": "string",
+          "description": "TokenEnv is the environment variable holding the token; GITHUB_TOKEN,\nthen GH_TOKEN, when empty. The token is never written here."
+        },
+        "baseUrl": {
+          "type": "string",
+          "description": "BaseURL is the REST API's URL; https://api.github.com when empty."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "GitHub is how GitHub is reached."
+    },
+    "Scan": {
+      "properties": {
+        "githubRepositories": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "GitHubRepositories are owner/repo names whose Actions secrets are\nlisted and whose workflows are read, so a secret a workflow reads and\nthe registry does not store is reported."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Scan lists accounts to check that the registry may not name."
+    }
+  },
+  "title": "credforge targets",
+  "description": "How credforge reaches each store a credential registry names. It holds no secrets."
+}
