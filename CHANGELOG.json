@@ -9,6 +9,39 @@
   ],
   "releases": [
     {
+      "version": "v0.4.0",
+      "date": "2026-11-20",
+      "highlights": [
+        {
+          "description": "The review page shows who handles each credential's generate, distribute and rotate stages: a human operator, an agent operator or a program"
+        }
+      ],
+      "added": [
+        {
+          "description": "Review page: a Handled by column with each stage's actor, and a filter matching credentials with any stage handled that way",
+          "commit": "0d8d388"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "systemspec-credential v0.2.0, so a registry may say an AI agent acting for an operator (`agent`) handles a stage",
+          "commit": "c2696f4"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "README: the Handled by column, and the access the live check needs for GitHub Actions secrets and AWS SSM",
+          "commit": "c36bcab"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The review data carries a credential an agent rotates",
+          "commit": "a2bbf3a"
+        }
+      ]
+    },
+    {
       "version": "v0.3.0",
       "date": "2026-11-20",
       "highlights": [
