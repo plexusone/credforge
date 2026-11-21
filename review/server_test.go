@@ -28,7 +28,7 @@ func registry() *credspec.Registry {
 		Generation: credspec.Generation{Method: credspec.MethodRandom},
 		Stores:     []credspec.Store{{Type: "aws-ssm", Role: credspec.RolePrimary, Account: "hosting", Path: "/app/prod/DB"}},
 		Rotation:   credspec.Rotation{Policy: credspec.PolicyScheduled, IntervalDays: 90},
-		Handling:   credspec.Handling{Generate: credspec.ActorSystem, Distribute: credspec.ActorSystem, Rotate: credspec.ActorHuman},
+		Handling:   credspec.Handling{Generate: credspec.ActorSystem, Distribute: credspec.ActorSystem, Rotate: credspec.ActorAgent},
 	})
 }
 
@@ -96,6 +96,9 @@ func TestPageAndData(t *testing.T) {
 	}
 	if len(d.Credentials) != 1 || d.Credentials[0].Assessment.State != credspec.StateUnrecorded || d.CanCheck {
 		t.Fatalf("data = %+v", d)
+	}
+	if !strings.Contains(body, `"rotate":"agent"`) {
+		t.Fatalf("handling is missing from the data: %s", body)
 	}
 }
 
