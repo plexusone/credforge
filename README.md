@@ -33,7 +33,7 @@ and its event log: the secret a workflow needs that was never set, the token
 regenerated at the issuer but never updated in one repository, the value
 changed with nothing recorded.
 
-> **Status:** v0.4.0 checks, records and serves a review page; it never
+> **Status:** v0.5.0 checks, records and serves a review page; it never
 > writes a value. Installing
 > and rotating values through [OmniVault](https://github.com/plexusone/omnivault)
 > providers follows. See the
@@ -123,6 +123,13 @@ the registry is never written, so a change decision is applied to the
 registry's source and reviewed as a normal change. Both files hold no
 values and are meant to be committed.
 
+**To set up by hand** opens the **Setup list**: each credential left to
+set up, grouped by system and environment, with where to get it (the
+issuer, console, command or steps), what it may do (its entitlements)
+and where to put it (each store, with its install command and live
+state). After a live check it leaves out what is already in place. It
+prints cleanly.
+
 The **Handled by** column shows who generates, distributes and rotates
 each credential, in that order: a **human operator**, an **agent
 operator** (an AI agent acting for an operator) or a **program** (a
@@ -180,7 +187,7 @@ events, err := credforge.Record(reg, log, rep, credforge.DefaultGrace)
 
 - [Getting started](docs/getting-started.md)
 - [Specifications](docs/specs/initiatives/INIT-CREDFORGE-001/PRD.md)
-- [Releases](docs/releases/v0.4.0.md)
+- [Releases](docs/releases/v0.5.0.md)
 
 ## License
 
