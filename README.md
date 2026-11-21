@@ -130,6 +130,16 @@ and where to put it (each store, with its install command and live
 state). After a live check it leaves out what is already in place. It
 prints cleanly.
 
+The list follows the registry's setup guidance. What is needed for launch
+comes before what is needed later or optionally, and each item comes after
+what it requires. Prerequisites at issuers, such as a cloud project or a
+consent screen, appear with their steps and how to tell they are done.
+When a tool makes several credentials, its command appears once, as **Run
+once**, before the first credential it makes. Each card names what to set
+up first and the configuration changes the credential needs. The
+**Needed** filter picks launch, later or optional credentials, and the
+registry's advice opens from the summary.
+
 The **Handled by** column shows who generates, distributes and rotates
 each credential, in that order: a **human operator**, an **agent
 operator** (an AI agent acting for an operator) or a **program** (a
