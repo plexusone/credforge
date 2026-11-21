@@ -123,8 +123,26 @@ the registry is never written, so a change decision is applied to the
 registry's source and reviewed as a normal change. Both files hold no
 values and are meant to be committed.
 
+The **Handled by** column shows who generates, distributes and rotates
+each credential, in that order: a **human operator**, an **agent
+operator** (an AI agent acting for an operator) or a **program** (a
+deterministic tool such as a deploy tool or a CI workflow). The filter
+matches a credential when any of its stages is handled that way.
+
 The page answers only on a loopback address and to same-origin requests.
 Without a targets file it works without the live check.
+
+### Access for the live check
+
+The live check reads names and dates, never values:
+
+| Store | Credentials | Access needed |
+|---|---|---|
+| GitHub Actions secrets | `GITHUB_TOKEN` or `GH_TOKEN`; `$(gh auth token)` uses your GitHub CLI login | Admin on each repository (GitHub requires it to list secrets) and the `repo` scope; for a fine-grained token, Secrets: read and Contents: read on those repositories |
+| AWS SSM Parameter Store | The AWS SDK's default credentials, such as `AWS_PROFILE` | `ssm:DescribeParameters` in the region the targets file names |
+
+A store the check cannot reach makes the check fail with the reason; the
+rest of the page still works.
 
 ## Connectors
 
