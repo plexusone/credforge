@@ -26,12 +26,16 @@
   <input type="search" id="q" placeholder="Search ID, name, path, consumer, note…" autocomplete="off" aria-label="Search">
   <div class="filter-selects" id="filter-selects"></div>
   <button type="button" class="link" id="clear-filters">Clear filters</button>
+  <div class="views" role="group" aria-label="View">
+    <button type="button" id="view-table" aria-pressed="true">Table</button>
+    <button type="button" id="view-setup" aria-pressed="false" title="What is left to set up: where to get it, what it may do, where to put it">Setup list</button>
+  </div>
 </section>
 
 <main class="layout">
   <section class="list" aria-label="Credentials">
     <p class="muted small" id="count"></p>
-    <div class="table-wrap">
+    <div class="table-wrap" id="list-table">
       <table id="table">
         <thead>
           <tr>
@@ -49,6 +53,7 @@
         <tbody id="rows"></tbody>
       </table>
     </div>
+    <div class="setup" id="list-setup" hidden></div>
   </section>
   <aside class="detail" id="detail" aria-label="Details" hidden></aside>
 </main>

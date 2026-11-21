@@ -15,6 +15,15 @@ const ACTOR_SHORT = { human: "Human", agent: "Agent", system: "Program" };
 const ACTOR_TONE = { human: "b-amber", agent: "b-violet", system: "b-green" };
 const STAGES = ["generate", "distribute", "rotate"];
 const actors = (c) => [...new Set(STAGES.map((s) => c.handling[s]))];
+// setupBy is who must set a credential up, or "" when nothing is left:
+// a store the live check finds missing, or a planned credential with no
+// store found holding a value.
+function setupBy(r) {
+  if (r.kind !== "credential" || r.cred.status === "retired") return "";
+  const states = r.findings.map((f) => f.state);
+  const pending = states.includes("missing") || (r.cred.assessment.state === "planned" && !states.includes("present"));
+  return pending ? r.cred.handling.generate : "";
+}
 const handlingText = (c) => STAGES.map((s) => `${s}: ${ACTOR_LABEL[c.handling[s]] || c.handling[s]}`).join(" · ");
 
 const state = {
@@ -24,6 +33,7 @@ const state = {
   selected: null,    // subject of the open row
   filters: {},
   q: "",
+  view: "table",     // "table" or "setup"
 };
 
 const $ = (id) => document.getElementById(id);
@@ -136,6 +146,7 @@ const FILTERS = [
   { key: "status", label: "Status", get: (r) => (r.cred ? r.cred.status : "unlisted") },
   { key: "store", label: "Store", get: (r) => (r.cred ? (r.cred.stores || []).map((s) => s.type) : [r.finding.store.type]) },
   { key: "handled", label: "Handled by", get: (r) => (r.cred ? actors(r.cred).map((a) => ACTOR_LABEL[a] || a) : "(not in registry)") },
+  { key: "setup", label: "To set up by", get: (r) => (r.kind === "credential" ? ACTOR_LABEL[setupBy(r)] || "nothing to do" : "(not in registry)") },
   { key: "sensitivity", label: "Sensitivity", get: (r) => (r.cred ? r.cred.sensitivity || "(none)" : "(not in registry)") },
   { key: "log", label: "Log state", get: (r) => (r.cred ? r.cred.assessment.state : "(not in registry)") },
   { key: "live", label: "Live", get: (r) => r.live || "not checked" },
@@ -165,7 +176,7 @@ function setFilter(key, value) {
   if (value) state.filters[key] = value; else delete state.filters[key];
   saveHash();
   renderFilterSelects();
-  renderTable();
+  renderList();
 }
 
 function applyFilters() {
@@ -183,6 +194,7 @@ function saveHash() {
   const p = new URLSearchParams(state.filters);
   if (state.q) p.set("q", state.q);
   if (state.selected) p.set("open", state.selected);
+  if (state.view === "setup") p.set("view", "setup");
   const h = p.toString();
   history.replaceState(null, "", h ? "#" + h : location.pathname);
 }
@@ -193,6 +205,7 @@ function loadHash() {
   for (const f of FILTERS) if (p.get(f.key)) state.filters[f.key] = p.get(f.key);
   state.q = p.get("q") || "";
   state.selected = p.get("open");
+  state.view = p.get("view") === "setup" ? "setup" : "table";
   $("q").value = state.q;
 }
 
@@ -209,6 +222,19 @@ function renderHeader() {
   else { cs.textContent = `Live check ${when(d.check.at)}`; cs.className = "muted small"; cs.title = ""; }
 }
 
+// setupStat is the tile that opens the setup list of what a person sets up.
+function setupStat(n) {
+  const on = state.view === "setup" && state.filters.setup === ACTOR_LABEL.human;
+  return el("button", {
+    type: "button", class: "stat" + (on ? " on" : ""), title: "Show the setup list of what you set up by hand",
+    onclick: () => {
+      if (on) { delete state.filters.setup; state.view = "table"; }
+      else { state.filters.setup = ACTOR_LABEL.human; state.view = "setup"; }
+      saveHash(); renderSummary(); renderFilterSelects(); renderList();
+    },
+  }, el("b", {}, n), el("span", {}, "To set up by hand"));
+}
+
 function renderSummary() {
   const box = $("summary");
   box.replaceChildren();
@@ -222,6 +248,7 @@ function renderSummary() {
     stat(creds.length, "Credentials"),
     stat(creds.filter((r) => r.cred.status === "active").length, "Active", "status", "active"),
     stat(creds.filter((r) => r.cred.status === "planned").length, "Planned", "status", "planned"),
+    setupStat(creds.filter((r) => setupBy(r) === "human").length),
     stat(rows.filter((r) => !r.review).length, "Unreviewed", "review", "unreviewed"),
     stat(rows.filter((r) => r.review && r.review.decision === "change").length, "To change", "review", "change"),
   );
@@ -234,6 +261,87 @@ function renderSummary() {
   if (state.data.check && state.data.check.error) {
     box.append(el("p", { class: "small error" }, "Live check failed: " + state.data.check.error));
   }
+}
+
+function renderList() {
+  $("list-table").hidden = state.view !== "table";
+  $("list-setup").hidden = state.view !== "setup";
+  $("view-table").setAttribute("aria-pressed", String(state.view === "table"));
+  $("view-setup").setAttribute("aria-pressed", String(state.view === "setup"));
+  if (state.view === "setup") renderSetup(); else renderTable();
+}
+
+function setView(v) {
+  state.view = v;
+  saveHash();
+  renderSummary();
+  renderList();
+}
+
+// renderSetup lists the filtered credentials that are left to set up, by
+// system and environment: where to get each, what it may do and where to
+// put it.
+function renderSetup() {
+  applyFilters();
+  const box = $("list-setup");
+  box.replaceChildren();
+  const todo = state.filtered.filter((r) => setupBy(r));
+  const groups = new Map();
+  for (const r of todo) {
+    const g = `${r.cred.system} · ${r.cred.environment || "no environment"}`;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(r);
+  }
+  const names = [...groups.keys()].sort();
+  $("count").textContent = `${todo.length} to set up, of ${state.filtered.length} shown`;
+  if (!todo.length) {
+    box.append(el("p", { class: "muted" }, "Nothing left to set up among the credentials shown."));
+    return;
+  }
+  box.append(el("p", { class: "muted small" }, state.data.check && state.data.check.report
+    ? "From the live check: a store missing a value, or a planned credential with none found."
+    : "No live check yet, so this lists every planned credential. Run the live check to leave out what is already in place."));
+  for (const name of names) {
+    const rs = groups.get(name);
+    box.append(el("h2", { class: "setup-group" }, name, el("span", { class: "muted small" }, ` ${rs.length}`)));
+    for (const r of rs) box.append(setupCard(r));
+  }
+}
+
+function setupCard(r) {
+  const c = r.cred;
+  const g = c.generation || {};
+  const issuer = [c.issuer.type, c.issuer.account].filter(Boolean).join(" · ");
+  const link = (url, text) => el("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, text || url);
+  const section = (title, ...kids) => el("div", { class: "setup-part" }, el("h4", {}, title), ...kids);
+  const stores = (c.stores || []).slice().sort((a, b) => (a.role === "primary" ? 0 : 1) - (b.role === "primary" ? 0 : 1));
+  return el("article", { class: "setup-card" },
+    el("header", {},
+      el("button", { type: "button", class: "link mono", title: "Open its details", onclick: () => select(r.subject) }, c.id),
+      " ", badge(c.kind), c.sensitivity ? badge(c.sensitivity, c.sensitivity === "critical" ? "b-red" : "") : null,
+      " ", badge(ACTOR_SHORT[setupBy(r)] || setupBy(r), ACTOR_TONE[setupBy(r)]),
+      r.live && r.live !== "not checked" ? badge(r.live, LIVE_TONE[r.live]) : null),
+    c.description ? el("p", { class: "small" }, c.description) : null,
+    section("Get it from",
+      el("div", {}, issuer || "—", c.issuer.console ? [" · ", link(c.issuer.console, "console")] : null),
+      g.where ? el("div", { class: "muted small" }, g.where) : null,
+      g.command ? el("pre", {}, el("code", {}, g.command)) : null,
+      (g.steps || []).length ? el("ol", { class: "small" }, g.steps.map((s) => el("li", {}, s))) : null),
+    section("It may",
+      (c.entitlements || []).length
+        ? el("ul", { class: "small" }, c.entitlements.map((e) => el("li", {}, e.resource, " — ", el("b", {}, e.access), e.note ? el("span", { class: "muted" }, ` (${e.note})`) : null)))
+        : el("p", { class: "muted small" }, "No entitlements listed.")),
+    section("Put it in",
+      el("ul", { class: "small" }, stores.map((s) => {
+        const f = r.storeFinding(s);
+        return el("li", {},
+          el("div", {}, badge(s.type), s.role !== "primary" ? badge(s.role) : null, f ? badge(f.state, LIVE_TONE[f.state]) : null, " ",
+            el("span", { class: "mono" }, [s.account, s.path].filter(Boolean).join(" : ")),
+            s.console ? [" · ", link(s.console, "console")] : null),
+          s.install ? el("pre", {}, el("code", {}, s.install)) : null,
+          s.note ? el("div", { class: "muted" }, s.note) : null);
+      }))),
+    el("p", { class: "muted small" }, "When it is in place, open its details and log a created event."));
 }
 
 function renderTable() {
@@ -277,7 +385,7 @@ function select(subject) {
   state.selected = subject;
   saveHash();
   for (const tr of $("rows").children) tr.setAttribute("aria-selected", "false");
-  renderTable();
+  if (state.view === "table") renderTable();
   renderDetail();
 }
 
@@ -471,7 +579,7 @@ async function reload() {
   renderHeader();
   renderSummary();
   renderFilterSelects();
-  renderTable();
+  renderList();
   renderDetail();
 }
 
@@ -502,8 +610,10 @@ function moveSelection(step) {
 
 document.addEventListener("DOMContentLoaded", () => {
   loadHash();
-  $("q").addEventListener("input", (e) => { state.q = e.target.value; saveHash(); renderTable(); });
-  $("clear-filters").addEventListener("click", () => { state.filters = {}; state.q = ""; $("q").value = ""; saveHash(); renderFilterSelects(); renderTable(); });
+  $("q").addEventListener("input", (e) => { state.q = e.target.value; saveHash(); renderList(); });
+  $("clear-filters").addEventListener("click", () => { state.filters = {}; state.q = ""; $("q").value = ""; saveHash(); renderSummary(); renderFilterSelects(); renderList(); });
+  $("view-table").addEventListener("click", () => setView("table"));
+  $("view-setup").addEventListener("click", () => setView("setup"));
   $("run-check").addEventListener("click", runCheck);
   document.addEventListener("keydown", (e) => {
     const t = e.target.tagName;
