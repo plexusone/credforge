@@ -9,6 +9,31 @@
   ],
   "releases": [
     {
+      "version": "v0.6.0",
+      "date": "2026-11-21",
+      "highlights": [
+        {
+          "description": "The setup list follows the registry's setup guidance: launch items first and in setup order, prerequisites at issuers, and each tool command once"
+        }
+      ],
+      "added": [
+        {
+          "description": "Review page: prerequisites in the setup list with their steps and how to tell they are done; Run once cards for provisioner commands; what to set up first, configuration changes, issuer mode and who grants each entitlement on each card; a Needed filter; the registry's advice under the summary",
+          "commit": "28c9ca1"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The setup list puts launch items first and each item after what it requires; a credential a tool makes counts as set up by whoever runs the tool, and one needed only during a rotation is left out",
+          "commit": "28c9ca1"
+        },
+        {
+          "description": "Requires systemspec-credential v0.3.0",
+          "commit": "e90d7bb"
+        }
+      ]
+    },
+    {
       "version": "v0.5.0",
       "date": "2026-11-20",
       "highlights": [
