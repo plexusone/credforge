@@ -156,3 +156,6 @@ td.id .name { color: var(--muted); font-size: 12px; }
   .filter-selects select { max-width: none; flex: 1 1 140px; }
   th:nth-child(3), td:nth-child(3), th:nth-child(6), td:nth-child(6) { display: none; }
 }
+
+.nowrap { white-space: nowrap; }
+.nowrap .badge + .badge { margin-left: 3px; }

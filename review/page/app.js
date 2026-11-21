@@ -9,6 +9,14 @@ const STATUS_TONE = { active: "b-green", planned: "b-blue", retired: "" };
 const DECISION_TONE = { approved: "b-green", change: "b-amber", remove: "b-red" };
 const DECISION_LABEL = { approved: "Approved", change: "Change", remove: "Remove" };
 
+// Who handles each stage of a credential.
+const ACTOR_LABEL = { human: "Human operator", agent: "Agent operator", system: "Program" };
+const ACTOR_SHORT = { human: "Human", agent: "Agent", system: "Program" };
+const ACTOR_TONE = { human: "b-amber", agent: "b-violet", system: "b-green" };
+const STAGES = ["generate", "distribute", "rotate"];
+const actors = (c) => [...new Set(STAGES.map((s) => c.handling[s]))];
+const handlingText = (c) => STAGES.map((s) => `${s}: ${ACTOR_LABEL[c.handling[s]] || c.handling[s]}`).join(" · ");
+
 const state = {
   data: null,
   rows: [],          // credential rows and unlisted stores, built from data
@@ -127,6 +135,7 @@ const FILTERS = [
   { key: "environment", label: "Environment", get: (r) => (r.cred ? r.cred.environment || "(none)" : "(not in registry)") },
   { key: "status", label: "Status", get: (r) => (r.cred ? r.cred.status : "unlisted") },
   { key: "store", label: "Store", get: (r) => (r.cred ? (r.cred.stores || []).map((s) => s.type) : [r.finding.store.type]) },
+  { key: "handled", label: "Handled by", get: (r) => (r.cred ? actors(r.cred).map((a) => ACTOR_LABEL[a] || a) : "(not in registry)") },
   { key: "sensitivity", label: "Sensitivity", get: (r) => (r.cred ? r.cred.sensitivity || "(none)" : "(not in registry)") },
   { key: "log", label: "Log state", get: (r) => (r.cred ? r.cred.assessment.state : "(not in registry)") },
   { key: "live", label: "Live", get: (r) => r.live || "not checked" },
@@ -242,6 +251,7 @@ function renderTable() {
         el("td", {}, badge(c.status, STATUS_TONE[c.status])),
         el("td", {}, badge(c.assessment.state, LOG_TONE[c.assessment.state])),
         el("td", {}, [...new Set((c.stores || []).map((s) => s.type))].map((t) => badge(t))),
+        el("td", { class: "nowrap", title: handlingText(c) }, STAGES.map((s) => badge(ACTOR_SHORT[c.handling[s]] || c.handling[s], ACTOR_TONE[c.handling[s]]))),
         el("td", {}, r.live ? badge(r.live, LIVE_TONE[r.live]) : ""),
         el("td", {}, r.review ? badge(DECISION_LABEL[r.review.decision], DECISION_TONE[r.review.decision]) : el("span", { class: "muted small" }, "—")),
       );
@@ -253,6 +263,7 @@ function renderTable() {
         el("td", {}, badge("unlisted", "b-violet")),
         el("td", { class: "muted" }, "—"),
         el("td", {}, badge(r.finding.store.type)),
+        el("td", { class: "muted" }, "—"),
         el("td", {}, badge(r.live, LIVE_TONE[r.live])),
         el("td", {}, r.review ? badge(DECISION_LABEL[r.review.decision], DECISION_TONE[r.review.decision]) : el("span", { class: "muted small" }, "—")),
       );
@@ -347,7 +358,7 @@ function credentialDetail(r) {
     ["Rotation", [c.rotation.policy, c.rotation.intervalDays ? `every ${c.rotation.intervalDays} days` : ""].filter(Boolean).join(", ")],
     ["Procedure", c.rotation.procedure],
     ["Impact", c.rotation.impact],
-    ["Handling", `generate: ${c.handling.generate} · distribute: ${c.handling.distribute} · rotate: ${c.handling.rotate}`],
+    ["Handled by", handlingText(c)],
     ["Revocation", c.revocation],
     ["Exposure", c.exposure],
     ["Recovery", c.recovery],
