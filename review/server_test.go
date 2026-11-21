@@ -212,3 +212,36 @@ func TestLiveCheckIsKept(t *testing.T) {
 		t.Fatalf("a failed check should say why: %s", body)
 	}
 }
+
+func TestDataCarriesSetupGuidance(t *testing.T) {
+	r := registry()
+	r.Credentials[0].Requires = []string{"app/prod/project"}
+	r.Credentials[0].Need = credspec.NeedLaunch
+	r.Prerequisites = []credspec.Prerequisite{{ID: "app/prod/project", Name: "Project", System: "example-app", Environment: "prod",
+		Status: credspec.StatusPlanned, Issuer: credspec.Issuer{Type: credspec.IssuerGoogleCloud}, Steps: []string{"Create it."}}}
+	if err := r.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	s := &review.Server{Registry: r, EventsPath: filepath.Join(dir, "events.json"), ReviewsPath: filepath.Join(dir, "reviews.json"),
+		Now: func() time.Time { return day0 }}
+	d, err := s.Data()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Prerequisites) != 1 || strings.Join(d.Order, ",") != "app/prod/project,"+dbID {
+		t.Errorf("prerequisites %v, order %v", d.Prerequisites, d.Order)
+	}
+	if len(d.Advice) != 1 || !strings.Contains(d.Advice[0], "no entitlements") {
+		t.Errorf("advice %q", d.Advice)
+	}
+	b, err := json.Marshal(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"need":"launch"`, `"requires":["app/prod/project"]`, `"order":[`} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("data lacks %s", want)
+		}
+	}
+}

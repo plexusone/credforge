@@ -15,14 +15,20 @@ const ACTOR_SHORT = { human: "Human", agent: "Agent", system: "Program" };
 const ACTOR_TONE = { human: "b-amber", agent: "b-violet", system: "b-green" };
 const STAGES = ["generate", "distribute", "rotate"];
 const actors = (c) => [...new Set(STAGES.map((s) => c.handling[s]))];
+const NEED_LABEL = { launch: "For launch", later: "Later", optional: "Optional", rotation: "Only during rotation" };
+const NEED_TONE = { launch: "b-blue", later: "", optional: "", rotation: "" };
+const needLabel = (n) => NEED_LABEL[n] || "(unstated)";
+// madeBy is who acts to make the value: whoever runs the provisioner's
+// command when a tool makes it, else whoever generates it.
+const madeBy = (c) => (c.generation && c.generation.provisioner ? c.generation.provisioner.runBy : c.handling.generate);
 // setupBy is who must set a credential up, or "" when nothing is left:
 // a store the live check finds missing, or a planned credential with no
 // store found holding a value.
 function setupBy(r) {
-  if (r.kind !== "credential" || r.cred.status === "retired") return "";
+  if (r.kind !== "credential" || r.cred.status === "retired" || r.cred.need === "rotation") return "";
   const states = r.findings.map((f) => f.state);
   const pending = states.includes("missing") || (r.cred.assessment.state === "planned" && !states.includes("present"));
-  return pending ? r.cred.handling.generate : "";
+  return pending ? madeBy(r.cred) : "";
 }
 const handlingText = (c) => STAGES.map((s) => `${s}: ${ACTOR_LABEL[c.handling[s]] || c.handling[s]}`).join(" · ");
 
@@ -134,6 +140,8 @@ function searchText(c, rv) {
   for (const s of c.consumers || []) parts.push(s.system, s.component, s.via, s.note);
   for (const e of c.entitlements || []) parts.push(e.resource, e.access, e.note);
   for (const t of c.tags || []) parts.push(t);
+  for (const t of c.configChanges || []) parts.push(t);
+  parts.push(c.need, c.generation && c.generation.provisioner && c.generation.provisioner.command);
   if (rv) parts.push(rv.note, rv.decision);
   return parts.filter(Boolean).join(" ").toLowerCase();
 }
@@ -144,6 +152,7 @@ const FILTERS = [
   { key: "system", label: "System", get: (r) => (r.cred ? r.cred.system : "(not in registry)") },
   { key: "environment", label: "Environment", get: (r) => (r.cred ? r.cred.environment || "(none)" : "(not in registry)") },
   { key: "status", label: "Status", get: (r) => (r.cred ? r.cred.status : "unlisted") },
+  { key: "need", label: "Needed", get: (r) => (r.cred ? needLabel(r.cred.need) : "(not in registry)") },
   { key: "store", label: "Store", get: (r) => (r.cred ? (r.cred.stores || []).map((s) => s.type) : [r.finding.store.type]) },
   { key: "handled", label: "Handled by", get: (r) => (r.cred ? actors(r.cred).map((a) => ACTOR_LABEL[a] || a) : "(not in registry)") },
   { key: "setup", label: "To set up by", get: (r) => (r.kind === "credential" ? ACTOR_LABEL[setupBy(r)] || "nothing to do" : "(not in registry)") },
@@ -248,7 +257,8 @@ function renderSummary() {
     stat(creds.length, "Credentials"),
     stat(creds.filter((r) => r.cred.status === "active").length, "Active", "status", "active"),
     stat(creds.filter((r) => r.cred.status === "planned").length, "Planned", "status", "planned"),
-    setupStat(creds.filter((r) => setupBy(r) === "human").length),
+    setupStat(creds.filter((r) => setupBy(r) === "human").length +
+      (state.data.prerequisites || []).filter((p) => p.status === "planned" && p.need !== "rotation").length),
     stat(rows.filter((r) => !r.review).length, "Unreviewed", "review", "unreviewed"),
     stat(rows.filter((r) => r.review && r.review.decision === "change").length, "To change", "review", "change"),
   );
@@ -260,6 +270,12 @@ function renderSummary() {
   }
   if (state.data.check && state.data.check.error) {
     box.append(el("p", { class: "small error" }, "Live check failed: " + state.data.check.error));
+  }
+  const advice = state.data.advice || [];
+  if (advice.length) {
+    box.append(el("details", { class: "advice small" },
+      el("summary", {}, `Registry advice: ${advice.length} entr${advice.length === 1 ? "y" : "ies"} likely to mislead whoever sets them up`),
+      el("ul", {}, advice.map((a) => el("li", {}, a)))));
   }
 }
 
@@ -278,68 +294,166 @@ function setView(v) {
   renderList();
 }
 
-// renderSetup lists the filtered credentials that are left to set up, by
-// system and environment: where to get each, what it may do and where to
-// put it.
+// renderSetup lists what is left to set up among the filtered rows, by
+// system and environment, in setup order: the prerequisites still planned,
+// each provisioner command once, then each credential with where to get
+// it, what it may do and where to put it.
 function renderSetup() {
   applyFilters();
   const box = $("list-setup");
   box.replaceChildren();
-  const todo = state.filtered.filter((r) => setupBy(r));
+  // What is needed sooner comes first; within a need, setup order.
+  const NEED_RANK = { launch: 0, later: 2, optional: 3, rotation: 4 };
+  const need = new Map();
+  for (const p of state.data.prerequisites || []) need.set(p.id, p.need);
+  for (const c of state.data.credentials) need.set(c.id, c.need);
+  const rank = new Map((state.data.order || []).map((id, i) => [id, i]));
+  const byRank = (a, b) => (NEED_RANK[need.get(a)] ?? 1) - (NEED_RANK[need.get(b)] ?? 1) || (rank.get(a) ?? 1e9) - (rank.get(b) ?? 1e9);
+  const todo = state.filtered.filter((r) => setupBy(r)).sort((a, b) => byRank(a.subject, b.subject));
+  const prereqs = setupPrerequisites().sort((a, b) => byRank(a.id, b.id));
   const groups = new Map();
-  for (const r of todo) {
-    const g = `${r.cred.system} · ${r.cred.environment || "no environment"}`;
-    if (!groups.has(g)) groups.set(g, []);
-    groups.get(g).push(r);
-  }
+  const group = (system, env) => {
+    const g = `${system} · ${env}`;
+    if (!groups.has(g)) groups.set(g, { prereqs: [], rows: [] });
+    return groups.get(g);
+  };
+  for (const p of prereqs) group(p.system, p.environment || "every environment").prereqs.push(p);
+  for (const r of todo) group(r.cred.system, r.cred.environment || "no environment").rows.push(r);
   const names = [...groups.keys()].sort();
-  $("count").textContent = `${todo.length} to set up, of ${state.filtered.length} shown`;
-  if (!todo.length) {
+  $("count").textContent = `${todo.length} to set up${prereqs.length ? ` and ${prereqs.length} prerequisite${prereqs.length === 1 ? "" : "s"}` : ""}, of ${state.filtered.length} shown`;
+  if (!todo.length && !prereqs.length) {
     box.append(el("p", { class: "muted" }, "Nothing left to set up among the credentials shown."));
     return;
   }
   box.append(el("p", { class: "muted small" }, state.data.check && state.data.check.report
-    ? "From the live check: a store missing a value, or a planned credential with none found."
-    : "No live check yet, so this lists every planned credential. Run the live check to leave out what is already in place."));
+    ? "From the live check: a store missing a value, or a planned credential with none found. In setup order: each item comes after what it requires."
+    : "No live check yet, so this lists every planned credential. Run the live check to leave out what is already in place. In setup order: each item comes after what it requires."));
   for (const name of names) {
-    const rs = groups.get(name);
-    box.append(el("h2", { class: "setup-group" }, name, el("span", { class: "muted small" }, ` ${rs.length}`)));
-    for (const r of rs) box.append(setupCard(r));
+    const g = groups.get(name);
+    box.append(el("h2", { class: "setup-group" }, name, el("span", { class: "muted small" }, ` ${g.rows.length + g.prereqs.length}`)));
+    // Setup order across both kinds; each provisioner command shows once,
+    // before the first credential it makes.
+    const items = [...g.prereqs.map((p) => ({ id: p.id, p })), ...g.rows.map((r) => ({ id: r.subject, r }))].sort((a, b) => byRank(a.id, b.id));
+    const runs = new Map(provisionerRuns(g.rows).map((run) => [run.p.command, run]));
+    for (const it of items) {
+      if (it.p) { box.append(prerequisiteCard(it.p)); continue; }
+      const pv = it.r.cred.generation && it.r.cred.generation.provisioner;
+      if (pv && runs.has(pv.command)) { box.append(runCard(runs.get(pv.command))); runs.delete(pv.command); }
+      box.append(setupCard(it.r));
+    }
   }
+}
+
+// setupPrerequisites are the planned prerequisites the filters allow. A
+// prerequisite has only a system, an environment and a need, so any other
+// filter hides them all.
+function setupPrerequisites() {
+  const f = state.filters;
+  const others = Object.keys(f).filter((k) => f[k] && !["system", "environment", "need", "setup"].includes(k));
+  if (others.length || (f.setup && f.setup !== ACTOR_LABEL.human)) return [];
+  const q = state.q.trim().toLowerCase();
+  return (state.data.prerequisites || []).filter((p) => p.status === "planned" && p.need !== "rotation" &&
+    (!f.system || f.system === p.system) &&
+    (!f.environment || !p.environment || f.environment === p.environment) &&
+    (!f.need || f.need === needLabel(p.need)) &&
+    (!q || q.split(/\s+/).every((w) => [p.id, p.name, p.description, p.system, p.environment, ...(p.steps || [])].join(" ").toLowerCase().includes(w))));
+}
+
+// provisionerRuns groups the rows a provisioner makes by its command, so
+// each command is shown once with what it makes.
+function provisionerRuns(rows) {
+  const runs = new Map();
+  for (const r of rows) {
+    const p = r.cred.generation && r.cred.generation.provisioner;
+    if (!p) continue;
+    if (!runs.has(p.command)) runs.set(p.command, { p, ids: [] });
+    runs.get(p.command).ids.push(r.cred.id);
+  }
+  return [...runs.values()];
+}
+
+const extLink = (url, text) => el("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, text || url);
+const part = (title, ...kids) => el("div", { class: "setup-part" }, el("h4", {}, title), ...kids);
+
+// requiresList shows what is set up first, with whether each is done.
+function requiresList(ids) {
+  const creds = new Map(state.rows.filter((r) => r.kind === "credential").map((r) => [r.cred.id, r]));
+  const prereqs = new Map((state.data.prerequisites || []).map((p) => [p.id, p]));
+  return el("ul", { class: "small" }, ids.map((id) => {
+    const p = prereqs.get(id);
+    const r = creds.get(id);
+    const done = p ? p.status === "active" : r && !setupBy(r);
+    return el("li", {}, badge(done ? "done" : "to do", done ? "b-green" : "b-amber"), " ",
+      r ? el("button", { type: "button", class: "link mono", onclick: () => select(id) }, id) : el("span", { class: "mono" }, id),
+      p ? el("span", { class: "muted" }, ` (${p.name})`) : null);
+  }));
+}
+
+function prerequisiteCard(p) {
+  const issuer = [p.issuer.type, p.issuer.account, p.issuer.mode ? p.issuer.mode + " mode" : ""].filter(Boolean).join(" · ");
+  return el("article", { class: "setup-card prereq" },
+    el("header", {}, el("span", { class: "mono" }, p.id), " ", badge("prerequisite", "b-violet"),
+      p.need ? badge(needLabel(p.need), NEED_TONE[p.need]) : null, " ", badge(ACTOR_SHORT.human, ACTOR_TONE.human)),
+    el("p", { class: "small" }, el("b", {}, p.name), p.description ? " — " + p.description : ""),
+    (p.requires || []).length ? part("First", requiresList(p.requires)) : null,
+    part("Set it up at",
+      el("div", {}, issuer || "—", p.issuer.console ? [" · ", extLink(p.issuer.console, "console")] : null),
+      p.command ? el("pre", {}, el("code", {}, p.command)) : null,
+      (p.steps || []).length ? el("ol", { class: "small" }, p.steps.map((s) => el("li", {}, s))) : null),
+    p.done ? part("Done when", el("p", { class: "small" }, p.done)) : null,
+    (p.links || []).length ? el("p", { class: "small" }, p.links.flatMap((l) => [extLink(l.url, l.title), " "])) : null,
+    el("p", { class: "muted small" }, "When it is set up, change its status to active in the registry."));
+}
+
+function runCard(run) {
+  const p = run.p;
+  return el("article", { class: "setup-card run" },
+    el("header", {}, el("b", {}, "Run once: "), el("span", {}, p.tool), " ", badge(ACTOR_SHORT[p.runBy] || p.runBy, ACTOR_TONE[p.runBy])),
+    el("pre", {}, el("code", {}, p.command)),
+    el("p", { class: "small" }, `Makes ${run.ids.length === 1 ? "" : run.ids.length + " credentials: "}`, run.ids.flatMap((id, i) => [i ? ", " : "", el("span", { class: "mono" }, id)]),
+      p.stores ? el("span", { class: "muted" }, ", and stores them") : null, "."));
 }
 
 function setupCard(r) {
   const c = r.cred;
   const g = c.generation || {};
-  const issuer = [c.issuer.type, c.issuer.account].filter(Boolean).join(" · ");
-  const link = (url, text) => el("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, text || url);
-  const section = (title, ...kids) => el("div", { class: "setup-part" }, el("h4", {}, title), ...kids);
+  const pv = g.provisioner;
+  const issuer = [c.issuer.type, c.issuer.account, c.issuer.mode ? c.issuer.mode + " mode" : ""].filter(Boolean).join(" · ");
   const stores = (c.stores || []).slice().sort((a, b) => (a.role === "primary" ? 0 : 1) - (b.role === "primary" ? 0 : 1));
   return el("article", { class: "setup-card" },
     el("header", {},
       el("button", { type: "button", class: "link mono", title: "Open its details", onclick: () => select(r.subject) }, c.id),
       " ", badge(c.kind), c.sensitivity ? badge(c.sensitivity, c.sensitivity === "critical" ? "b-red" : "") : null,
+      c.need ? badge(needLabel(c.need), NEED_TONE[c.need]) : null,
       " ", badge(ACTOR_SHORT[setupBy(r)] || setupBy(r), ACTOR_TONE[setupBy(r)]),
       r.live && r.live !== "not checked" ? badge(r.live, LIVE_TONE[r.live]) : null),
     c.description ? el("p", { class: "small" }, c.description) : null,
-    section("Get it from",
-      el("div", {}, issuer || "—", c.issuer.console ? [" · ", link(c.issuer.console, "console")] : null),
+    (c.requires || []).length ? part("First", requiresList(c.requires)) : null,
+    part("Get it from",
+      el("div", {}, issuer || "—", c.issuer.console ? [" · ", extLink(c.issuer.console, "console")] : null),
+      pv ? el("div", { class: "small" }, "Made by ", el("b", {}, pv.tool), ": run ", el("code", {}, pv.command), " (above)") : null,
       g.where ? el("div", { class: "muted small" }, g.where) : null,
-      g.command ? el("pre", {}, el("code", {}, g.command)) : null,
+      !pv && g.command ? el("pre", {}, el("code", {}, g.command)) : null,
       (g.steps || []).length ? el("ol", { class: "small" }, g.steps.map((s) => el("li", {}, s))) : null),
-    section("It may",
+    part("It may",
       (c.entitlements || []).length
-        ? el("ul", { class: "small" }, c.entitlements.map((e) => el("li", {}, e.resource, " — ", el("b", {}, e.access), e.note ? el("span", { class: "muted" }, ` (${e.note})`) : null)))
+        ? el("ul", { class: "small" }, c.entitlements.map((e) => el("li", {}, e.resource, " — ", el("b", {}, e.access),
+          e.note ? el("span", { class: "muted" }, ` (${e.note})`) : null,
+          e.grantedBy ? el("span", { class: "muted" }, ` · granted by ${e.grantedBy}`) : null)))
         : el("p", { class: "muted small" }, "No entitlements listed.")),
-    section("Put it in",
+    (c.configChanges || []).length ? part("Configure", el("ul", { class: "small" }, c.configChanges.map((x) => el("li", {}, el("code", {}, x))))) : null,
+    part("Put it in",
       el("ul", { class: "small" }, stores.map((s) => {
         const f = r.storeFinding(s);
+        const written = pv && pv.stores && s.role === "primary";
         return el("li", {},
           el("div", {}, badge(s.type), s.role !== "primary" ? badge(s.role) : null, f ? badge(f.state, LIVE_TONE[f.state]) : null, " ",
             el("span", { class: "mono" }, [s.account, s.path].filter(Boolean).join(" : ")),
-            s.console ? [" · ", link(s.console, "console")] : null),
-          s.install ? el("pre", {}, el("code", {}, s.install)) : null,
-          s.note ? el("div", { class: "muted" }, s.note) : null);
+            s.console ? [" · ", extLink(s.console, "console")] : null),
+          written ? el("div", { class: "muted" }, `Written by ${pv.tool}; nothing to install by hand.`)
+            : s.install ? el("pre", {}, el("code", {}, s.install)) : null,
+          s.note ? el("div", { class: "muted" }, s.note) : null,
+          s.backup ? el("div", { class: "muted" }, `Backed up by ${s.backup}`) : null);
       }))),
     el("p", { class: "muted small" }, "When it is in place, open its details and log a created event."));
 }
@@ -426,7 +540,9 @@ function credentialDetail(r) {
     ["Kind", c.kind],
     ["Sensitivity", c.sensitivity],
     ["Owner", c.owner],
-    ["Issuer", [c.issuer.type, c.issuer.account].filter(Boolean).join(" · ")],
+    ["Needed", c.need ? needLabel(c.need) : ""],
+    ["Issuer", [c.issuer.type, c.issuer.account, c.issuer.mode ? c.issuer.mode + " mode" : ""].filter(Boolean).join(" · ")],
+    ["Set up after", (c.requires || []).join(", ")],
     ["Depends on", (c.dependsOn || []).join(", ")],
     ["Reaches", (c.reaches || []).join(", ")],
     ["Tags", (c.tags || []).map((t) => badge(t))],
@@ -440,7 +556,8 @@ function credentialDetail(r) {
       el("div", { class: "mono" }, [s.account, s.path].filter(Boolean).join(" : ")),
       f && f.detail ? el("div", { class: "muted small" }, f.detail + (f.source ? ` (${f.source})` : "")) : null,
       s.install ? el("div", { class: "small" }, "Install: ", el("code", {}, s.install)) : null,
-      s.note ? el("div", { class: "muted small" }, s.note) : null);
+      s.note ? el("div", { class: "muted small" }, s.note) : null,
+      s.backup ? el("div", { class: "muted small" }, "Backed up by " + s.backup) : null);
   })));
 
   if ((c.consumers || []).length) {
@@ -454,18 +571,29 @@ function credentialDetail(r) {
     frag.append(el("h3", {}, "Entitlements"));
     frag.append(el("ul", { class: "items" }, c.entitlements.map((e) => el("li", {},
       el("div", {}, e.resource, " — ", el("b", {}, e.access)),
-      e.note ? el("div", { class: "muted small" }, e.note) : null))));
+      e.note ? el("div", { class: "muted small" }, e.note) : null,
+      e.grantedBy ? el("div", { class: "muted small" }, "Granted by " + e.grantedBy) : null))));
+  }
+  if ((c.configChanges || []).length) {
+    frag.append(el("h3", {}, "Configuration changes"));
+    frag.append(el("ul", { class: "items" }, c.configChanges.map((x) => el("li", {}, el("code", {}, x)))));
   }
 
   frag.append(el("h3", {}, "Generation and rotation"));
   frag.append(kv([
     ["Method", c.generation.method],
     ["Where", c.generation.where],
+    ["Provisioner", c.generation.provisioner
+      ? el("span", {}, c.generation.provisioner.tool, ": ", el("code", {}, c.generation.provisioner.command),
+        ` · run by ${ACTOR_LABEL[c.generation.provisioner.runBy] || c.generation.provisioner.runBy}`,
+        c.generation.provisioner.stores ? " · stores the value" : "")
+      : ""],
     ["Command", c.generation.command ? el("code", {}, c.generation.command) : ""],
     ["Steps", (c.generation.steps || []).length ? el("ol", {}, c.generation.steps.map((s) => el("li", {}, s))) : ""],
     ["Rotation", [c.rotation.policy, c.rotation.intervalDays ? `every ${c.rotation.intervalDays} days` : ""].filter(Boolean).join(", ")],
     ["Procedure", c.rotation.procedure],
     ["Impact", c.rotation.impact],
+    ["During rotation", (c.rotation.secondaries || []).join(", ")],
     ["Handled by", handlingText(c)],
     ["Revocation", c.revocation],
     ["Exposure", c.exposure],

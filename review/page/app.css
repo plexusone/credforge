@@ -183,6 +183,11 @@ td.id .name { color: var(--muted); font-size: 12px; }
   margin: 4px 0; padding: 6px 8px; background: var(--surface-2); border-radius: 6px;
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
+.setup-card.prereq { border-left: 4px solid var(--violet); }
+.setup-card.run { border-left: 4px solid var(--accent); }
+.advice { flex-basis: 100%; margin: 4px 0 0; }
+.advice summary { cursor: pointer; color: var(--amber); }
+.advice ul { margin: 4px 0; padding-left: 20px; }
 
 @media print {
   .top-actions, .filters, .summary, .detail, .toast { display: none !important; }

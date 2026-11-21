@@ -71,16 +71,22 @@ type Row struct {
 
 // Data is everything the page shows.
 type Data struct {
-	Title       string               `json:"title"`
-	Now         time.Time            `json:"now"`
-	By          string               `json:"by"`
-	CanCheck    bool                 `json:"canCheck"`
-	Credentials []Row                `json:"credentials"`
-	Reviews     []Review             `json:"reviews"`
-	Check       *CheckResult         `json:"check,omitempty"`
-	EventTypes  []credspec.EventType `json:"eventTypes"`
-	Decisions   []Decision           `json:"decisions"`
-	States      []credforge.State    `json:"states"`
+	Title       string    `json:"title"`
+	Now         time.Time `json:"now"`
+	By          string    `json:"by"`
+	CanCheck    bool      `json:"canCheck"`
+	Credentials []Row     `json:"credentials"`
+	// Prerequisites are what is set up at issuers before credentials.
+	Prerequisites []credspec.Prerequisite `json:"prerequisites"`
+	// Order is every credential and prerequisite ID in setup order.
+	Order []string `json:"order"`
+	// Advice is the registry's advice: valid entries likely to mislead.
+	Advice     []string             `json:"advice"`
+	Reviews    []Review             `json:"reviews"`
+	Check      *CheckResult         `json:"check,omitempty"`
+	EventTypes []credspec.EventType `json:"eventTypes"`
+	Decisions  []Decision           `json:"decisions"`
+	States     []credforge.State    `json:"states"`
 }
 
 func (s *Server) now() time.Time {
@@ -181,9 +187,25 @@ func (s *Server) Data() (Data, error) {
 			Events:     events,
 		})
 	}
+	steps, err := s.Registry.SetupOrder()
+	if err != nil {
+		return Data{}, err
+	}
+	order := make([]string, len(steps))
+	for i, st := range steps {
+		order[i] = st.ID
+	}
+	advice := []string{}
+	for _, a := range s.Registry.Lint() {
+		advice = append(advice, a.String())
+	}
+	prereqs := s.Registry.Prerequisites
+	if prereqs == nil {
+		prereqs = []credspec.Prerequisite{}
+	}
 	d := Data{
 		Title: s.Title, Now: now.UTC(), By: s.By, CanCheck: s.Check != nil,
-		Credentials: rows, Reviews: rf.Reviews,
+		Credentials: rows, Prerequisites: prereqs, Order: order, Advice: advice, Reviews: rf.Reviews,
 		EventTypes: credspec.EventTypes(), Decisions: Decisions(), States: credforge.States(),
 	}
 	s.lastMu.Lock()
