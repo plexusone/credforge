@@ -45,3 +45,19 @@ func TestWrite(t *testing.T) {
 		t.Error("an SSM error was not returned")
 	}
 }
+
+func TestCreate(t *testing.T) {
+	f := &fakePut{}
+	w := &awsssm.Writer{API: f}
+	k := credforge.Key{Type: awsssm.StoreType, Account: "hosting", Path: "/app/prod/NEW"}
+	if err := w.Create(context.Background(), k, "test-value"); err != nil {
+		t.Fatal(err)
+	}
+	if aws.ToBool(f.in.Overwrite) || f.in.Type != types.ParameterTypeSecureString {
+		t.Errorf("create %+v; want a SecureString that replaces nothing", f.in)
+	}
+	f.err = &types.ParameterAlreadyExists{}
+	if err := w.Create(context.Background(), k, "test-value"); !errors.Is(err, credforge.ErrExists) {
+		t.Errorf("an existing parameter: %v", err)
+	}
+}

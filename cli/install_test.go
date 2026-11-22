@@ -11,6 +11,7 @@ import (
 	"github.com/plexusone/systemspec-credential/credspec"
 
 	"github.com/plexusone/credforge"
+	"github.com/plexusone/credforge/awsssm"
 	"github.com/plexusone/credforge/targets"
 )
 
@@ -141,5 +142,74 @@ func TestConnectorWriter(t *testing.T) {
 	t.Setenv("TEST_WRITER_TOKEN", "test-token")
 	if w, err := c.Writer("github-actions", "example-org/web"); w == nil || err != nil {
 		t.Errorf("a bound repository: %v, %v", w, err)
+	}
+}
+
+func TestGenerateCommand(t *testing.T) {
+	dir := fixture(t, "https://github.example")
+	reg, err := credspec.LoadRegistry(filepath.Join(dir, "credentials.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := cred("app/prod/SESSION_KEY", credspec.Store{Type: "aws-ssm", Role: credspec.RolePrimary, Account: "hosting", Path: "/app/prod/SESSION_KEY"})
+	c.Generation.Format = credspec.FormatHex32
+	reg.Add(c)
+	if err := reg.Save(filepath.Join(dir, "credentials.json")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TEST_GITHUB_TOKEN", "test-token")
+	w := &recordingWriter{got: map[string]string{}}
+	newCmd := func(args ...string) (string, error) {
+		cmd := New(Options{
+			Connector: func(f *targets.File) credforge.Connector {
+				cn := NewConnector(f)
+				cn.newAWS = func(context.Context, string, string) (*awsssm.Observer, error) {
+					return &awsssm.Observer{API: fakeSSM{}}, nil
+				}
+				return cn
+			},
+			Writer: func(*targets.File) func(string, string) (credforge.Writer, error) {
+				return func(string, string) (credforge.Writer, error) { return w, nil }
+			},
+		})
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetErr(&out)
+		cmd.SetIn(strings.NewReader(""))
+		cmd.SetArgs(append(append([]string{"generate"}, args...),
+			"--only", "app/prod/*",
+			"--registry", filepath.Join(dir, "credentials.json"),
+			"--events", filepath.Join(dir, "events.json"),
+			"--targets", filepath.Join(dir, "targets.json")))
+		err := cmd.ExecuteContext(context.Background())
+		return out.String(), err
+	}
+	out, err := newCmd("--dry-run")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "make   app/prod/SESSION_KEY (hex32) in aws-ssm:hosting:/app/prod/SESSION_KEY") || len(w.got) != 0 {
+		t.Errorf("dry run wrote %v:\n%s", w.got, out)
+	}
+	if out, err = newCmd(); err != nil || len(w.got) != 0 || !strings.Contains(out, "nothing made") {
+		t.Errorf("unconfirmed: %v, wrote %v:\n%s", err, w.got, out)
+	}
+	if out, err = newCmd("--yes"); err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	v := w.got["aws-ssm:hosting:/app/prod/SESSION_KEY"]
+	if len(v) != 64 || strings.Contains(out, v) {
+		t.Errorf("wrote a %d-character value, or printed it:\n%s", len(v), out)
+	}
+	reg, err = credspec.LoadRegistry(filepath.Join(dir, "credentials.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	log, err := credspec.LoadLog(filepath.Join(dir, "events.json"), reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := log.History("app/prod/SESSION_KEY"); len(h) != 1 || h[0].Type != credspec.EventCreated {
+		t.Errorf("history %+v", h)
 	}
 }
