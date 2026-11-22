@@ -239,20 +239,24 @@ func (b *builder) credential(c credspec.Credential) {
 }
 
 // usage says how to use the runbook: what to record first, the access its
-// commands use, how a run goes, and how to check it.
+// commands use, how a run goes, and how to check it. Each command is a
+// code block of its own, to copy as it is.
 func (b *builder) usage() string {
-	cmd := func(args ...string) string { return code(strings.Join(b.cmd(args...), " ")) }
+	block := func(args ...string) string { return "```bash\n" + strings.Join(b.cmd(args...), " ") + "\n```" }
 	return strings.Join([]string{
-		"**Before the first run**, record what is already in place, so the steps for it show as done: " +
-			cmd("check", "--include-planned", "--record") + ".",
-		"**Access.** The commands use your own: a GitHub token in `GITHUB_TOKEN` or `GH_TOKEN` for Actions secrets " +
-			"(`export GITHUB_TOKEN=$(gh auth token)`), and your AWS profile in `AWS_PROFILE` for parameters. " +
-			"Neither is a credential this runbook makes.",
-		"**Run a step** with " + cmd(b.setupArgs("run", "<step>")...) + ". It asks before each command, waits while " +
-			"you do an issuer's part, then checks the step and records it. Or follow the step by hand and record it with " +
-			cmd(b.setupArgs("record", "<step>", "done")...) + ". install and generate record each credential themselves.",
-		"**Check** every step with " + cmd(b.setupArgs("verify")...) + ". Each check is " + cmd("check", "--only", "<credential>") +
+		"**Before the first run**, record what is already in place, so the steps for it show as done:",
+		block("check", "--include-planned", "--record"),
+		"**Access.** The commands use your own: a GitHub token in `GITHUB_TOKEN` or `GH_TOKEN` for Actions secrets, " +
+			"and your AWS profile in `AWS_PROFILE` for parameters. Neither is a credential this runbook makes.",
+		"```bash\nexport GITHUB_TOKEN=$(gh auth token)\nexport AWS_PROFILE=<profile>\n```",
+		"**Run a step.** It asks before each command, waits while you do an issuer's part, then checks the step and records it. " +
+			"install and generate record each credential themselves.",
+		block(b.setupArgs("run", "<step>")...),
+		"Or follow the step by hand and record it:",
+		block(b.setupArgs("record", "<step>", "done")...),
+		"**Check** every step. Each check is " + code(strings.Join(b.cmd("check", "--only", "<credential>"), " ")) +
 			", which reads names and never values. The run's progress is kept beside the event log; commit both.",
+		block(b.setupArgs("verify")...),
 	}, "\n\n")
 }
 
