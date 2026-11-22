@@ -7,6 +7,10 @@
 // when each was set, or a parameter store's names and when each last
 // changed, and reports where the two disagree. Observers list names and
 // dates only; no type in this package has a field for a value.
+//
+// An Installer writes one value the operator supplies to every store the
+// registry lists for its credential, after a Prober checks it, and records
+// it. The value passes through Apply as an argument and is never kept.
 package credforge
 
 import (
