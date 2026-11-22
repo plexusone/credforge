@@ -9,6 +9,45 @@
   ],
   "releases": [
     {
+      "version": "v0.8.0",
+      "date": "2026-11-22",
+      "highlights": [
+        {
+          "description": "`credforge generate` makes the random values and keys the registry describes, only where no store holds one, and records them"
+        }
+      ],
+      "added": [
+        {
+          "description": "`credforge generate`: makes each credential whose `generation.format` is set and whose provisioner is `credforge generate`, or none, in every primary store, when none of them holds a value; lists what it will make and leave and asks first; `--only`, `--include-planned`, `--dry-run`, `--yes` and `--by`",
+          "commit": "1298b22"
+        },
+        {
+          "description": "`Generator`, `Generates`, `NewValue` and the `Creator` interface with `ErrExists` in the credforge package; `GeneratorTool` names the provisioner",
+          "commit": "90667e7"
+        },
+        {
+          "description": "AWS SSM: `Writer.Create` puts a `SecureString` without replacing an existing parameter",
+          "commit": "be4382f"
+        },
+        {
+          "description": "`cli.Generate` mounts the generate command alone in a host tool's command tree",
+          "commit": "1298b22"
+        }
+      ],
+      "changed": [
+        {
+          "description": "Requires systemspec-credential v0.4.0",
+          "commit": "8c37df0"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Generating random values and keys, in the README, the guide and the specifications",
+          "commit": "cb06043"
+        }
+      ]
+    },
+    {
       "version": "v0.7.0",
       "date": "2026-11-21",
       "highlights": [

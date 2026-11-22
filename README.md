@@ -276,7 +276,7 @@ events, err := credforge.Record(reg, log, rep, credforge.DefaultGrace)
 
 - [Getting started](docs/getting-started.md)
 - [Specifications](docs/specs/initiatives/INIT-CREDFORGE-001/PRD.md)
-- [Releases](docs/releases/v0.7.0.md)
+- [Releases](docs/releases/v0.8.0.md)
 
 ## License
 
