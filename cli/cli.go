@@ -94,7 +94,7 @@ type env struct {
 	targets  string
 }
 
-// New returns the command tree: check, install, review and schema.
+// New returns the command tree: check, generate, install, review and schema.
 func New(o Options) *cobra.Command {
 	if o.Use == "" {
 		o.Use = "credforge"
@@ -105,7 +105,7 @@ func New(o Options) *cobra.Command {
 	e := &env{opts: o.withDefaults()}
 	cmd := &cobra.Command{Use: o.Use, Short: o.Short, SilenceUsage: true, SilenceErrors: true}
 	e.flags(cmd.PersistentFlags())
-	cmd.AddCommand(e.check(), e.install(), e.review(), e.schema())
+	cmd.AddCommand(e.check(), e.generate(), e.install(), e.review(), e.schema())
 	return cmd
 }
 
