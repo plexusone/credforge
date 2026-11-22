@@ -6,6 +6,7 @@ package awsssm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -127,6 +128,32 @@ func (w *Writer) Write(ctx context.Context, k credforge.Key, value string) error
 	}
 	if _, err := w.API.PutParameter(ctx, in); err != nil {
 		return fmt.Errorf("awsssm: setting %s: %w", k.Path, err)
+	}
+	return nil
+}
+
+// Create sets k.Path as a SecureString only when it does not exist, and
+// returns credforge.ErrExists when it does.
+func (w *Writer) Create(ctx context.Context, k credforge.Key, value string) error {
+	if k.Type != StoreType {
+		return fmt.Errorf("awsssm: %s is not an %s store", k, StoreType)
+	}
+	if !strings.HasPrefix(k.Path, "/") {
+		return fmt.Errorf("awsssm: parameter %q is not a full path", k.Path)
+	}
+	in := &ssm.PutParameterInput{
+		Name: aws.String(k.Path), Value: aws.String(value),
+		Type: types.ParameterTypeSecureString, Overwrite: aws.Bool(false),
+	}
+	if w.KeyID != "" {
+		in.KeyId = aws.String(w.KeyID)
+	}
+	if _, err := w.API.PutParameter(ctx, in); err != nil {
+		var exists *types.ParameterAlreadyExists
+		if errors.As(err, &exists) {
+			return fmt.Errorf("awsssm: %s: %w", k.Path, credforge.ErrExists)
+		}
+		return fmt.Errorf("awsssm: creating %s: %w", k.Path, err)
 	}
 	return nil
 }
