@@ -230,6 +230,15 @@ or connection error.
   `Generator.Apply` makes each value with `crypto/rand` and writes it
   through a `Creator` when the writer has one (SSM `PutParameter` without
   overwrite), so a value set after the check is never replaced.
+- `runbook.Build` turns the registry into a systemspec-runbook runbook
+  for one system and, optionally, environment: a phase per need, steps in
+  `Registry.SetupOrder`, a prerequisite's steps, one step per provisioner
+  command and one for every value `generate` makes, and each issued
+  credential's console, steps, entitlements, `install` and configuration
+  changes. Every step that sets a credential is checked with
+  `check --only <id>`. A dependency on a later step is an error, naming
+  the entries. `setup` mounts systemspec-runbook's commands over it, with
+  the progress log under `--progress`.
 - `install` reads the value hidden from a terminal, or from standard input
   with `--stdin --yes`; never from an argument. It confirms the plan before
   asking for the value.

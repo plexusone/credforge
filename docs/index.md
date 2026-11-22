@@ -14,8 +14,9 @@ regenerated at the issuer but never updated in one repository, the value
 changed with nothing recorded.
 
 > **Status:** credforge checks, records, serves a review page, installs a
-> value you supply after checking it works, and generates random values
-> and keys where they are missing. Pushing values from and
+> value you supply after checking it works, generates random values and
+> keys where they are missing, and turns the registry into a runbook for
+> setting a system's credentials up. Pushing values from and
 > rotating them through [OmniVault](https://github.com/plexusone/omnivault)
 > providers follows. See the
 > [roadmap](specs/initiatives/INIT-CREDFORGE-001/ROADMAP.md).
@@ -160,6 +161,39 @@ leave  app/prod/SIGNING_KEY: every store holds a value
   printed.
 - **Asks first.** It lists what it will make; `--yes` skips the question
   and `--dry-run` stops after the list.
+
+## Set up a system's credentials
+
+`credforge setup` builds a runbook, in
+[systemspec-runbook](https://github.com/plexusone/systemspec-runbook)'s
+format, from the registry for one system's credentials, and runs it step
+by step:
+
+```bash
+credforge setup --system example-app --env prod list
+credforge setup --system example-app --env prod show 1.3
+credforge setup --system example-app --env prod run 1.3
+credforge setup --system example-app --env prod verify
+credforge setup --system example-app --env prod doc --html -o example-app-prod.html
+```
+
+- **Everything comes from the registry.** Phases follow the needs
+  (launch, then later and optional with `--need`), and steps the setup
+  order: a prerequisite at an issuer, with its steps and how to tell it
+  is done; one step for each tool's command and one for every value
+  `generate` makes; and for each credential from an issuer, its console,
+  its steps, the exact access to give it, `credforge install`, and the
+  configuration it needs.
+- **Each step is checked** with `credforge check --only <credential>`,
+  which reads names and never values.
+- **A run** asks before each command, waits while you do the issuer's
+  part, then checks and records the step in its own progress log
+  (`setup-<system>-<env>.json` beside the event log).
+- `export` writes the runbook as JSON, for `runbookspec` or another tool.
+- A credential whose primary stores are named for different values, such
+  as an OAuth client's secret and its ID, is not offered an install: the
+  step says to give each value its own credential, and `install` refuses
+  it.
 
 ## Connectors
 
