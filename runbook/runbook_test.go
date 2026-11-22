@@ -194,13 +194,20 @@ func TestSummaryCountsAndShares(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"**6 credentials**: 5 for launch, 1 later. 1 generated, 1 made by tools, 3 from issuers, 1 otherwise; and 1 to set up at issuers first.",
-		"| ORG_TOKEN<br>`example-app/prod/ORG_TOKEN` | launch | from github, installed | github example-org | [[step:1.6]] | same issuer account as other-app |",
-		"| SESSION_KEY<br>`example-app/prod/SESSION_KEY` | launch | generated (hex32) | self | [[step:1.2]] | none |",
+		"**6 credentials**: 5 for launch, 1 later. **You create and set 4**; tools you run make and store 2, for you to review. You also set up 1 thing at issuers first.",
+		"**You create and set these (4)**",
+		"| ORG_TOKEN<br>`example-app/prod/ORG_TOKEN` | launch | from github, installed | you, at github | you, with install | github example-org | [[step:1.6]] | same issuer account as other-app |",
+		"| API_TOKEN<br>`example-app/prod/API_TOKEN` | launch | from example-issuer, installed | you, at example-issuer | you, with install; the deploy copies it to the host |",
+		"**Tools you run make and store these; review them (2)**",
+		"| SESSION_KEY<br>`example-app/prod/SESSION_KEY` | launch | generated (hex32) | credforge generate; you run it | the same command | self | [[step:1.2]] | none |",
+		"| DB_DSN<br>`example-app/prod/DB_DSN` | launch | made by db-tool | db-tool; you run it | the same tool |",
 	} {
 		if !strings.Contains(r.Summary, want) {
 			t.Errorf("the summary lacks\n%s\nin\n%s", want, r.Summary)
 		}
+	}
+	if strings.Index(r.Summary, "You create and set these") > strings.Index(r.Summary, "Tools you run") {
+		t.Error("what you create comes after what tools make")
 	}
 	// The table follows the steps.
 	if strings.Index(r.Summary, "LATER_KEY") < strings.Index(r.Summary, "ORG_TOKEN") {
