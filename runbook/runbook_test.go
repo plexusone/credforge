@@ -196,11 +196,11 @@ func TestSummaryCountsAndShares(t *testing.T) {
 	for _, want := range []string{
 		"**6 credentials**: 5 for launch, 1 later. **You create and set 4**; tools you run make and store 2, for you to review. You also set up 1 thing at issuers first.",
 		"**You create and set these (4)**",
-		"| ORG_TOKEN<br>`example-app/prod/ORG_TOKEN` | launch | from github, installed | you, at github | you, with install | github example-org | [[step:1.6]] | same issuer account as other-app |",
-		"| API_TOKEN<br>`example-app/prod/API_TOKEN` | launch | from example-issuer, installed | you, at example-issuer | you, with install; the deploy copies it to the host |",
+		"| ORG_TOKEN<br>`example-app/prod/ORG_TOKEN` | launch | from github, installed | you, at github example-org | you, with install, in aws-ssm hosting | [[step:1.6]] | same issuer account as other-app |",
+		"| API_TOKEN<br>`example-app/prod/API_TOKEN` | launch | from example-issuer, installed | you, at example-issuer | you, with install, in aws-ssm hosting; the deploy copies it to the host |",
 		"**Tools you run make and store these; review them (2)**",
-		"| SESSION_KEY<br>`example-app/prod/SESSION_KEY` | launch | generated (hex32) | credforge generate; you run it | the same command | self | [[step:1.2]] | none |",
-		"| DB_DSN<br>`example-app/prod/DB_DSN` | launch | made by db-tool | db-tool; you run it | the same tool |",
+		"| SESSION_KEY<br>`example-app/prod/SESSION_KEY` | launch | generated (hex32) | credforge generate; you run it | the same command, in aws-ssm hosting | [[step:1.2]] | none |",
+		"| DB_DSN<br>`example-app/prod/DB_DSN` | launch | made by db-tool | db-tool; you run it | the same tool, in aws-ssm hosting |",
 	} {
 		if !strings.Contains(r.Summary, want) {
 			t.Errorf("the summary lacks\n%s\nin\n%s", want, r.Summary)

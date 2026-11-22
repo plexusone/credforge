@@ -517,8 +517,38 @@ const (
 	partyOther
 )
 
-// whoOf says who sets c up, who creates it and who sets it in its stores.
+// whoOf says who sets c up, who creates it and where, and who sets it and
+// in which stores: an actor from handling.generate or the provisioner's
+// runBy, an issuer from issuer.type and issuer.account, and the stores
+// from each primary store's type and account.
 func whoOf(c credspec.Credential) (party, string, string) {
+	pt, creates, sets := whoOfActor(c)
+	if in := storesWhere(c.Primary()); in != "" && sets != "as its steps say" {
+		sets += ", in " + in
+	}
+	return pt, creates, sets
+}
+
+// issuerWhere is the issuer's type and account, such as
+// "github example-org".
+func issuerWhere(i credspec.Issuer) string {
+	return strings.TrimSpace(i.Type + " " + i.Account)
+}
+
+// storesWhere lists the stores' types and accounts, each once, such as
+// "aws-ssm hosting".
+func storesWhere(stores []credspec.Store) string {
+	var out []string
+	for _, st := range stores {
+		w := strings.TrimSpace(st.Type + " " + st.Account)
+		if !slices.Contains(out, w) {
+			out = append(out, w)
+		}
+	}
+	return strings.Join(out, ", ")
+}
+
+func whoOfActor(c credspec.Credential) (party, string, string) {
 	p := c.Generation.Provisioner
 	runner := func(a credspec.Actor) string {
 		switch a {
@@ -552,7 +582,7 @@ func whoOf(c credspec.Credential) (party, string, string) {
 	who := c.SetUpBy()
 	creates := "you, by hand"
 	if c.Generation.Method == credspec.MethodIssued {
-		creates = "you, at " + c.Issuer.Type
+		creates = "you, at " + issuerWhere(c.Issuer)
 	}
 	switch who {
 	case credspec.ActorAgent:
@@ -620,8 +650,8 @@ func (b *builder) table() string {
 	}
 	var out []string
 	for _, g := range groups {
-		rows := []string{"| Credential | Needed | How it is made | Who creates it | Who sets it | Issuer | Step | Shared with other systems |",
-			"|---|---|---|---|---|---|---|---|"}
+		rows := []string{"| Credential | Needed | How it is made | Who creates it | Who sets it | Step | Shared with other systems |",
+			"|---|---|---|---|---|---|---|"}
 		n := 0
 		for _, id := range b.selected {
 			c, _ := b.reg.Find(id)
@@ -630,15 +660,11 @@ func (b *builder) table() string {
 				continue
 			}
 			n++
-			issuer := c.Issuer.Type
-			if c.Issuer.Account != "" {
-				issuer += " " + c.Issuer.Account
-			}
 			if then := deployed(c); then != "" {
 				sets += "; " + then
 			}
-			rows = append(rows, fmt.Sprintf("| %s<br>%s | %s | %s | %s | %s | %s | [[step:%s]] | %s |",
-				cell(c.Name), code(c.ID), b.needOf[id], cell(how(c)), cell(creates), cell(sets), cell(issuer), b.stepOf[id], cell(b.shared(c))))
+			rows = append(rows, fmt.Sprintf("| %s<br>%s | %s | %s | %s | %s | [[step:%s]] | %s |",
+				cell(c.Name), code(c.ID), b.needOf[id], cell(how(c)), cell(creates), cell(sets), b.stepOf[id], cell(b.shared(c))))
 		}
 		if n == 0 {
 			continue
