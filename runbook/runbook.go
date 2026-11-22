@@ -113,6 +113,8 @@ type builder struct {
 	groups map[string]*group
 	// requires are each step's entries to depend on, resolved at the end.
 	requires map[string][]string
+	// selected are the credentials set up, in setup order.
+	selected []string
 }
 
 type group struct {
@@ -223,6 +225,7 @@ func requirements(c credspec.Credential) []string {
 // credential places a credential's step: with its provisioner's command,
 // with generate, or on its own.
 func (b *builder) credential(c credspec.Credential) {
+	b.selected = append(b.selected, c.ID)
 	p := c.Generation.Provisioner
 	need := b.needOf[c.ID]
 	switch {
@@ -416,10 +419,9 @@ func (b *builder) runbook(done []string) (*rb.Runbook, error) {
 		credspec.NeedOptional: {"Optional", "what an optional part needs once it is turned on"},
 	}
 	r := &rb.Runbook{
-		ID:      "credentials-" + strings.ReplaceAll(b.scope(), " ", "-"),
-		Title:   b.scope() + " credentials",
-		Summary: b.summary(done),
-		Usage:   b.usage(),
+		ID:    "credentials-" + strings.ReplaceAll(b.scope(), " ", "-"),
+		Title: b.scope() + " credentials",
+		Usage: b.usage(),
 	}
 	// Phases are numbered in the order of the needs asked for, and their
 	// steps renumbered to match.
@@ -464,6 +466,10 @@ func (b *builder) runbook(done []string) (*rb.Runbook, error) {
 		slices.Sort(deps)
 		s.DependsOn = deps
 	}
+	// The summary lists the credentials in step order, known once the
+	// steps are renumbered.
+	slices.SortStableFunc(b.selected, func(x, y string) int { return order[b.stepOf[x]] - order[b.stepOf[y]] })
+	r.Summary = b.summary(done)
 	if err := r.Validate(rb.ValidateOptions{KnownCredential: func(id string) bool { _, ok := b.reg.Find(id); return ok }}); err != nil {
 		return nil, fmt.Errorf("runbook: %w", err)
 	}
@@ -474,11 +480,125 @@ func (b *builder) summary(done []string) string {
 	var lines []string
 	lines = append(lines, fmt.Sprintf("The credentials %s needs for %s, from the credential registry, in the order they are set up.",
 		b.scope(), needList(b.o.Needs)))
+	lines = append(lines, b.counts(), b.table())
 	if len(done) > 0 {
 		lines = append(lines, fmt.Sprintf("Already set up, so left out: %s.", codeList(done)))
 	}
 	return strings.Join(lines, "\n\n")
 }
+
+// how says how a credential is made, in a few words.
+func how(c credspec.Credential) string {
+	p := c.Generation.Provisioner
+	switch {
+	case credforge.Generates(c):
+		return "generated (" + string(c.Generation.Format) + ")"
+	case p != nil && p.Stores:
+		return "made by " + p.Tool
+	case c.Generation.Method == credspec.MethodIssued:
+		return "from " + c.Issuer.Type + ", installed"
+	case c.Generation.Method == credspec.MethodDerived:
+		return "derived"
+	}
+	return string(c.Generation.Method) + ", by hand"
+}
+
+// counts is a line counting the credentials by need and by how they are
+// made, and the prerequisites.
+func (b *builder) counts() string {
+	byNeed := map[credspec.Need]int{}
+	var generated, tools, issued, other int
+	for _, id := range b.selected {
+		c, _ := b.reg.Find(id)
+		byNeed[b.needOf[id]]++
+		p := c.Generation.Provisioner
+		switch {
+		case credforge.Generates(c):
+			generated++
+		case p != nil && p.Stores:
+			tools++
+		case c.Generation.Method == credspec.MethodIssued:
+			issued++
+		default:
+			other++
+		}
+	}
+	var needs []string
+	for _, n := range b.o.Needs {
+		if byNeed[n] > 0 {
+			word := string(n)
+			if n == credspec.NeedLaunch {
+				word = "for launch"
+			}
+			needs = append(needs, fmt.Sprintf("%d %s", byNeed[n], word))
+		}
+	}
+	line := fmt.Sprintf("**%d credentials**: %s. %d generated, %d made by tools, %d from issuers", len(b.selected), strings.Join(needs, ", "), generated, tools, issued)
+	if other > 0 {
+		line += fmt.Sprintf(", %d otherwise", other)
+	}
+	prereqs := 0
+	for id := range b.needOf {
+		if _, ok := b.reg.FindPrerequisite(id); ok {
+			prereqs++
+		}
+	}
+	if prereqs > 0 {
+		line += fmt.Sprintf("; and %d to set up at issuers first", prereqs)
+	}
+	return line + "."
+}
+
+// table lists each credential: when it is needed, how it is made, its
+// issuer, its step, and what it shares with other systems.
+func (b *builder) table() string {
+	rows := []string{"| Credential | Needed | How it is made | Issuer | Step | Shared with other systems |", "|---|---|---|---|---|---|"}
+	for _, id := range b.selected {
+		c, _ := b.reg.Find(id)
+		issuer := c.Issuer.Type
+		if c.Issuer.Account != "" {
+			issuer += " " + c.Issuer.Account
+		}
+		rows = append(rows, fmt.Sprintf("| %s<br>%s | %s | %s | %s | [[step:%s]] | %s |",
+			cell(c.Name), code(c.ID), b.needOf[id], cell(how(c)), cell(issuer), b.stepOf[id], cell(b.shared(c))))
+	}
+	return strings.Join(rows, "\n")
+}
+
+// shared names the other systems whose credentials come from the same
+// issuer account, and the credentials of other systems this one requires
+// or depends on; "none" when there are neither.
+func (b *builder) shared(c credspec.Credential) string {
+	var parts []string
+	if c.Issuer.Account != "" && c.Issuer.Type != credspec.IssuerSelf {
+		var systems []string
+		for _, o := range b.reg.Credentials {
+			if o.System != c.System && o.Status != credspec.StatusRetired && o.Issuer.Type == c.Issuer.Type &&
+				o.Issuer.Account == c.Issuer.Account && !slices.Contains(systems, o.System) {
+				systems = append(systems, o.System)
+			}
+		}
+		slices.Sort(systems)
+		if len(systems) > 0 {
+			parts = append(parts, "same issuer account as "+strings.Join(systems, ", "))
+		}
+	}
+	for _, d := range requirements(c) {
+		if o, ok := b.reg.Find(d); ok && o.System != c.System {
+			parts = append(parts, "needs "+code(d))
+		}
+		if p, ok := b.reg.FindPrerequisite(d); ok && p.System != c.System {
+			parts = append(parts, "needs "+code(d))
+		}
+	}
+	if len(parts) == 0 {
+		return "none"
+	}
+	return strings.Join(parts, "; ")
+}
+
+// cell keeps text from breaking a Markdown table row.
+func cell(s string) string { return strings.ReplaceAll(s, "|", "\\|") }
 
 func owner(a credspec.Actor) rb.Owner {
 	switch a {
