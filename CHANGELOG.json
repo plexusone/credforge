@@ -9,6 +9,45 @@
   ],
   "releases": [
     {
+      "version": "v0.9.0",
+      "date": "2026-11-22",
+      "highlights": [
+        {
+          "description": "`credforge setup` turns the registry into a runbook for setting one system's credentials up, run, checked and recorded step by step"
+        }
+      ],
+      "added": [
+        {
+          "description": "`credforge setup --system <system> [--env <env>] [--need …]`: systemspec-runbook's `list`, `show`, `run`, `verify`, `record` and `doc` (Markdown, or HTML with `--html`) over a runbook built from the registry, with progress kept in `setup-<system>-<env>.json` beside the event log (`--progress`), and `export` to write the runbook as JSON",
+          "commit": "5d47ddf"
+        },
+        {
+          "description": "The runbook: a phase per need and steps in the registry's setup order; prerequisites with their steps; a step per provisioner command and one for every value `generate` makes; each issued credential's console, steps, exact access, `install` and configuration changes; every step checked with `check --only`, which reads names only",
+          "commit": "5177f2e"
+        },
+        {
+          "description": "In Go: `runbook.Build`, `cli.Setup`, `Options.Tool` for how the runbook's commands run credforge in a host tool, and `ValueNames`",
+          "commit": "5177f2e"
+        }
+      ],
+      "changed": [
+        {
+          "description": "`install` refuses a credential whose primary stores are named for different values, such as an OAuth client's secret and its ID, which it would otherwise fill with the same value",
+          "commit": "69ff0d0"
+        },
+        {
+          "description": "Requires systemspec-runbook v0.1.0",
+          "commit": "5fd6ad6"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Setting up a system's credentials, in the README, the guide and the specifications",
+          "commit": "aafe417"
+        }
+      ]
+    },
+    {
       "version": "v0.8.0",
       "date": "2026-11-22",
       "highlights": [
