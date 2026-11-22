@@ -9,6 +9,16 @@
   ],
   "releases": [
     {
+      "version": "v0.9.1",
+      "date": "2026-11-22",
+      "changed": [
+        {
+          "description": "The setup runbook's usage says what to record before the first run (`check --include-planned --record`), the GitHub token and AWS profile its commands use, what a run does and how to record a step done by hand, and how to verify every step",
+          "commit": "095d861"
+        }
+      ]
+    },
+    {
       "version": "v0.9.0",
       "date": "2026-11-22",
       "highlights": [
