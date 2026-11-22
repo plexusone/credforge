@@ -359,6 +359,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#install-a-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install a value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#connectors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -927,6 +938,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#install-a-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install a value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#connectors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1003,8 +1025,9 @@ and its event log: the secret a workflow needs that was never set, the token
 regenerated at the issuer but never updated in one repository, the value
 changed with nothing recorded.</p>
 <blockquote>
-<p><strong>Status:</strong> v0.1.0 checks and records; it never writes a value. Installing
-and rotating values through <a href="https://github.com/plexusone/omnivault">OmniVault</a>
+<p><strong>Status:</strong> credforge checks, records, serves a review page and installs
+a value you supply, after checking it works. Pushing values from and
+rotating them through <a href="https://github.com/plexusone/omnivault">OmniVault</a>
 providers follows. See the
 <a href="specs/initiatives/INIT-CREDFORGE-001/ROADMAP/">roadmap</a>.</p>
 </blockquote>
@@ -1116,6 +1139,65 @@ each store is reached. It holds no secrets:</p>
 </table>
 <p>The exit status is 0 when nothing is in a <code>--fail-on</code> state, 1 when
 something is, and 2 on an error.</p>
+<h2 id="install-a-value">Install a value<a class="headerlink" href="#install-a-value" title="Permanent link">&para;</a></h2>
+<p><code>credforge install</code> sets one credential's value in every store the
+registry lists for it, then records it. It replaces running
+<code>gh secret set</code> once per repository and recording the change afterwards.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="k">$(</span>gh<span class="w"> </span>auth<span class="w"> </span>token<span class="k">)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>credforge<span class="w"> </span>install<span class="w"> </span>app/ci/deploy<span class="w"> </span>--registry<span class="w"> </span>credentials.json<span class="w"> </span>--events<span class="w"> </span>events.json<span class="w"> </span>--targets<span class="w"> </span>targets.json
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>install app/ci/deploy: a new value (rotated), replacing the one made 2026-03-11
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  check  the value against its entitlements before writing
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  write  github-actions:example-org/web:DEPLOY_TOKEN
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  write  github-actions:example-org/api:DEPLOY_TOKEN
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>Write 2 store(s)? [y/N] y
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>Value of app/ci/deploy (hidden):
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>checked  the token reads github.com/example-org/lib (contents: read)
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>wrote    github-actions:example-org/web:DEPLOY_TOKEN
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>wrote    github-actions:example-org/api:DEPLOY_TOKEN
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>recorded rotated in events.json, expires 2027-03-11
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>recorded verified in events.json
+</code></pre></div>
+<ul>
+<li><strong>The writes come first.</strong> It lists each store and asks before it reads
+  the value. <code>--dry-run</code> lists them and stops. Stores no binding reaches,
+  such as a password manager, are listed for you to set.</li>
+<li><strong>The value is read once.</strong> It is read hidden from the terminal, or from
+  standard input with <code>--stdin --yes</code>. It is never an argument, never
+  written to disk and never printed. GitHub receives it sealed with the
+  repository's public key.</li>
+<li><strong>The value is checked before anything is written.</strong> A token GitHub
+  issues must read each <code>github.com/&lt;owner&gt;/&lt;repo&gt;</code> its entitlements name.
+  A missing repository, an organization's approval still pending or an
+  expired token stops the install with the reason. <code>--no-probe</code> skips the
+  check.</li>
+<li><strong>It is recorded.</strong> The event is <code>created</code>, or <code>rotated</code> when the log
+  already has a value. It carries the expiry from <code>--expires</code>, or else the
+  expiry GitHub reports for the token. A <code>verified</code> event lists the checks
+  that passed.</li>
+<li><strong>Refusals.</strong> A credential that a provisioner makes and stores is refused,
+  with the provisioner's command to run instead, and so is a retired
+  credential.</li>
+</ul>
+<p>Writing needs more access than checking:</p>
+<table>
+<thead>
+<tr>
+<th>Store</th>
+<th>Access needed to write</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub Actions secrets</td>
+<td>The <code>repo</code> scope, or for a fine-grained token Secrets: read and write on each repository</td>
+</tr>
+<tr>
+<td>AWS SSM Parameter Store</td>
+<td><code>ssm:PutParameter</code>, and <code>kms:Encrypt</code> on the parameters' key</td>
+</tr>
+</tbody>
+</table>
 <h2 id="connectors">Connectors<a class="headerlink" href="#connectors" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1128,12 +1210,12 @@ something is, and 2 on an error.</p>
 <tbody>
 <tr>
 <td>GitHub Actions secrets (<code>github-actions</code>)</td>
-<td>Repository secret names and when each was set; workflow files' <code>secrets.NAME</code></td>
+<td>Repository secret names and when each was set; workflow files' <code>secrets.NAME</code>; <code>install</code> writes a repository secret, sealed</td>
 <td>Secret values cannot be read through GitHub's API</td>
 </tr>
 <tr>
 <td>AWS Systems Manager Parameter Store (<code>aws-ssm</code>)</td>
-<td>Parameter names and last change, one directory level at a time</td>
+<td>Parameter names and last change, one directory level at a time; <code>install</code> writes a <code>SecureString</code></td>
 <td><code>GetParameter</code>, <code>GetParameters</code></td>
 </tr>
 </tbody>
@@ -1141,16 +1223,16 @@ something is, and 2 on an error.</p>
 <h2 id="in-go">In Go<a class="headerlink" href="#in-go" title="Permanent link">&para;</a></h2>
 <p>The comparison is a pure function, and the command tree mounts in a host
 tool that builds its registry in Go:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">cmd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">cli</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">cli</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">Use</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;observe&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">Registry</span><span class="p">:</span><span class="w"> </span><span class="nx">buildRegistry</span><span class="p">,</span><span class="w">                       </span><span class="c1">// func() (*credspec.Registry, error)</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">Targets</span><span class="p">:</span><span class="w">  </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">targets</span><span class="p">.</span><span class="nx">File</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">myTargets</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">},</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">cmd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">cli</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">cli</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">Use</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;observe&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">Registry</span><span class="p">:</span><span class="w"> </span><span class="nx">buildRegistry</span><span class="p">,</span><span class="w">                       </span><span class="c1">// func() (*credspec.Registry, error)</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">Targets</span><span class="p">:</span><span class="w">  </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">targets</span><span class="p">.</span><span class="nx">File</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">myTargets</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">})</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">rep</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Compare</span><span class="p">(</span><span class="nx">reg</span><span class="p">,</span><span class="w"> </span><span class="nx">log</span><span class="p">,</span><span class="w"> </span><span class="nx">scopes</span><span class="p">,</span><span class="w"> </span><span class="nx">observations</span><span class="p">,</span><span class="w"> </span><span class="nx">references</span><span class="p">,</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">Grace</span><span class="p">:</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">DefaultGrace</span><span class="p">,</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="p">})</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nx">events</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Record</span><span class="p">(</span><span class="nx">reg</span><span class="p">,</span><span class="w"> </span><span class="nx">log</span><span class="p">,</span><span class="w"> </span><span class="nx">rep</span><span class="p">,</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">DefaultGrace</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">rep</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Compare</span><span class="p">(</span><span class="nx">reg</span><span class="p">,</span><span class="w"> </span><span class="nx">log</span><span class="p">,</span><span class="w"> </span><span class="nx">scopes</span><span class="p">,</span><span class="w"> </span><span class="nx">observations</span><span class="p">,</span><span class="w"> </span><span class="nx">references</span><span class="p">,</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">Grace</span><span class="p">:</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">DefaultGrace</span><span class="p">,</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="p">})</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nx">events</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Record</span><span class="p">(</span><span class="nx">reg</span><span class="p">,</span><span class="w"> </span><span class="nx">log</span><span class="p">,</span><span class="w"> </span><span class="nx">rep</span><span class="p">,</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">DefaultGrace</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <ul>

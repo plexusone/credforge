@@ -1159,6 +1159,11 @@ providers and writing them to every store the registry lists.</p>
 </ol>
 <h3 id="phase-3-install-and-rotate">Phase 3: install and rotate<a class="headerlink" href="#phase-3-install-and-rotate" title="Permanent link">&para;</a></h3>
 <ol>
+<li><strong>Install.</strong> Take a value the operator has, such as a token an issuer
+    just showed once, read it hidden from the terminal, check it works
+    (a GitHub token reads each repository its entitlements name), write it
+    to each store the registry lists, and record it with its expiry. One
+    command replaces setting each store by hand and recording it after.</li>
 <li><strong>Push.</strong> Write a value from a master copy, named by an OmniVault URI
     (<code>op://…</code>, <code>aws-sm://…</code>, <code>keyring://…</code>), to each store the registry
     lists for that credential, then record <code>deployed</code> per store.</li>

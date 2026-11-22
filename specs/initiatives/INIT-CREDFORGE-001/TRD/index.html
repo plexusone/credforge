@@ -1362,9 +1362,27 @@ or connection error.</p>
 <code>Options.Targets</code> a targets file built in Go.</p>
 <h2 id="phase-3-design-notes-writes">Phase 3 design notes (writes)<a class="headerlink" href="#phase-3-design-notes-writes" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>Destination</code> is the write side of a store type: <code>Set(ctx, Key, value)</code>.
+<li><code>Writer</code> is the write side of a store type: <code>Write(ctx, Key, value)</code>.
   GitHub Actions secrets are written sealed with the repository's public key
-  (libsodium sealed box); SSM parameters as <code>SecureString</code>.</li>
+  (libsodium sealed box); SSM parameters as <code>SecureString</code>, replacing the
+  current value.</li>
+<li><code>Installer.Plan</code> lists the writes for one credential: every store with a
+  path that a binding reaches, except rendered stores, which a deploy
+  writes. A credential whose provisioner stores it is refused, since the
+  tool also sets it at the issuer. <code>Installer.Apply</code> runs the <code>Prober</code>, then
+  each write in order, then appends <code>created</code> (or <code>rotated</code> when the log
+  has a value) with the expiry and <code>verified</code> with the checks that passed.
+  A failed probe writes nothing; a failed write records nothing and names
+  the stores already written, so the install is run again.</li>
+<li>The GitHub prober uses the value itself as the token: it reads each
+  <code>github.com/&lt;owner&gt;/&lt;repo&gt;</code> entitlement's repository, and its commits
+  when the access names contents, and takes the expiry from GitHub's
+  <code>GitHub-Authentication-Token-Expiration</code> header. A 404 means the token
+  lacks the repository or the organization has not approved it; a 401
+  means it is mistyped, expired or revoked.</li>
+<li><code>install</code> reads the value hidden from a terminal, or from standard input
+  with <code>--stdin --yes</code>; never from an argument. It confirms the plan before
+  asking for the value.</li>
 <li>The master copy is named by an OmniVault URI on the credential (a tag or
   the targets file, not a value), read once into memory, written to each
   store, then zeroed where the language allows.</li>
@@ -1373,9 +1391,13 @@ or connection error.</p>
 </ul>
 <h2 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h2>
 <ul>
-<li>No value is read in Phases 1 and 2. Tests assert no observer calls a
+<li>No value is ever read from a store. Tests assert no observer calls a
   value-returning endpoint (<code>GetParameter</code>, <code>GetSecretValue</code>, secret
   contents).</li>
+<li>A value is read only by <code>install</code>, from the terminal or standard input,
+  held in memory for the writes, and never printed, logged or saved; tests
+  assert it is in no output and that the request to GitHub holds it only
+  sealed.</li>
 <li>Tokens are read from the environment, never from flags, and never printed
   or logged; HTTP errors are reported without request headers.</li>
 <li>The targets file and reports contain names, accounts and dates. They are

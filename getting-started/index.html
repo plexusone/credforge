@@ -410,6 +410,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#install-a-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install a value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#in-ci" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -940,6 +951,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#install-a-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install a value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#in-ci" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1018,6 +1040,16 @@ the log; <code>unlisted</code> are names the registry does not know.</p>
 </code></pre></div>
 <p>Logs each unrecorded store as <code>created</code> and each changed one as <code>deployed</code>,
 at the time the store reports, by <code>credforge</code>. The registry is never edited.</p>
+<h2 id="install-a-value">Install a value<a class="headerlink" href="#install-a-value" title="Permanent link">&para;</a></h2>
+<p>When an issuer shows you a new value, such as a GitHub token, install it
+into every store the registry lists for it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>credforge<span class="w"> </span>install<span class="w"> </span>app/ci/deploy<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># list the writes</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>credforge<span class="w"> </span>install<span class="w"> </span>app/ci/deploy<span class="w">             </span><span class="c1"># confirm, then paste the value</span>
+</code></pre></div>
+<p>It checks the value first (a GitHub token must read each repository its
+entitlements name), writes each store, and records <code>created</code> or <code>rotated</code>
+with the expiry, then <code>verified</code>. A later <code>credforge check</code> shows the
+stores as present.</p>
 <h2 id="in-ci">In CI<a class="headerlink" href="#in-ci" title="Permanent link">&para;</a></h2>
 <p>Run <code>credforge check</code> on a schedule with a read-only token; the default
 <code>--fail-on missing,stale,unregistered</code> fails the job when something would
