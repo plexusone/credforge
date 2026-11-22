@@ -1,12 +1,15 @@
 // Package github observes GitHub Actions secrets and the secrets a
-// repository's workflows read, through GitHub's REST API.
+// repository's workflows read, through GitHub's REST API, and writes
+// Actions secrets for an install.
 //
 // It lists secret names and when each was last set, and reads workflow
 // files for secrets.NAME. GitHub never returns an Actions secret's value,
-// and this package asks for none.
+// and this package asks for none. A secret it writes is sealed with the
+// repository's public key before it leaves the process.
 package github
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -155,6 +158,19 @@ func ParseReferences(workflow []byte) []string {
 
 var errNotFound = errors.New("not found")
 
+// StatusError is a response GitHub refused, other than 404.
+type StatusError struct {
+	Method, Path string
+	// Status is the HTTP status code.
+	Status int
+	// Text is the status line and GitHub's message.
+	Text string
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("github: %s %s: %s", e.Method, e.Path, e.Text)
+}
+
 func (c *Client) getJSON(ctx context.Context, p string, v any) error {
 	data, err := c.get(ctx, p, "application/vnd.github+json")
 	if err != nil {
@@ -169,16 +185,30 @@ func (c *Client) getJSON(ctx context.Context, p string, v any) error {
 // get requests p and returns the body. Errors name the path and status,
 // never the request's headers.
 func (c *Client) get(ctx context.Context, p, accept string) ([]byte, error) {
+	data, _, err := c.do(ctx, http.MethodGet, p, accept, nil)
+	return data, err
+}
+
+// do sends one request with an optional JSON body and returns the body and
+// the response's headers.
+func (c *Client) do(ctx context.Context, method, p, accept string, body []byte) ([]byte, http.Header, error) {
 	base := c.BaseURL
 	if base == "" {
 		base = DefaultBaseURL
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimSuffix(base, "/")+p, nil)
+	var rd io.Reader
+	if body != nil {
+		rd = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, strings.TrimSuffix(base, "/")+p, rd)
 	if err != nil {
-		return nil, fmt.Errorf("github: %w", err)
+		return nil, nil, fmt.Errorf("github: %w", err)
 	}
 	req.Header.Set("Accept", accept)
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	if c.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Token)
 	}
@@ -188,7 +218,7 @@ func (c *Client) get(ctx context.Context, p, accept string) ([]byte, error) {
 	}
 	resp, err := hc.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("github: GET %s: %w", p, redact(err))
+		return nil, nil, fmt.Errorf("github: %s %s: %w", method, p, redact(err))
 	}
 	defer func() {
 		// The body is fully read or discarded below; a close error leaves
@@ -197,11 +227,11 @@ func (c *Client) get(ctx context.Context, p, accept string) ([]byte, error) {
 	}()
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 	if err != nil {
-		return nil, fmt.Errorf("github: GET %s: %w", p, err)
+		return nil, nil, fmt.Errorf("github: %s %s: %w", method, p, err)
 	}
 	switch {
 	case resp.StatusCode == http.StatusNotFound:
-		return nil, fmt.Errorf("github: GET %s: %w", p, errNotFound)
+		return nil, resp.Header, fmt.Errorf("github: %s %s: %w", method, p, errNotFound)
 	case resp.StatusCode/100 != 2:
 		var msg struct {
 			Message string `json:"message"`
@@ -210,9 +240,9 @@ func (c *Client) get(ctx context.Context, p, accept string) ([]byte, error) {
 		if json.Unmarshal(data, &msg) == nil && msg.Message != "" {
 			detail = ": " + msg.Message
 		}
-		return nil, fmt.Errorf("github: GET %s: %s%s", p, resp.Status, detail)
+		return nil, resp.Header, &StatusError{Method: method, Path: p, Status: resp.StatusCode, Text: resp.Status + detail}
 	}
-	return data, nil
+	return data, resp.Header, nil
 }
 
 // redact drops a URL error's URL, which never holds the token here, but

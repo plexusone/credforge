@@ -11,6 +11,8 @@ require (
 	github.com/plexusone/systemspec-credential v0.3.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
+	golang.org/x/crypto v0.59.0
+	golang.org/x/term v0.48.0
 )
 
 require (
@@ -31,4 +33,5 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pb33f/go-yaml v0.2.0 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.2 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 )
