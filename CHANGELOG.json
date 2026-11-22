@@ -9,6 +9,49 @@
   ],
   "releases": [
     {
+      "version": "v0.7.0",
+      "date": "2026-11-21",
+      "highlights": [
+        {
+          "description": "`credforge install` sets a credential's value in every store the registry lists for it, after checking the value works, and records it with its expiry"
+        }
+      ],
+      "added": [
+        {
+          "description": "`credforge install`: lists the writes and asks, reads the value once, hidden, from the terminal (or standard input with `--stdin --yes`), writes each store, and records created or rotated with the expiry, then verified; `--dry-run`, `--expires`, `--by` and `--no-probe`",
+          "commit": "a345cd7"
+        },
+        {
+          "description": "Installer, Writer and Prober in the credforge package: Plan lists the writes, leaving rendered stores to the deploy and refusing a credential its provisioner stores; Apply probes, writes and records, writing nothing after a failed probe and recording nothing after a failed write",
+          "commit": "71f2f57"
+        },
+        {
+          "description": "GitHub: `Client.Write` sets an Actions repository secret sealed with the repository's public key; Prober checks that a token reads each `github.com/<owner>/<repo>` its entitlements name, and returns the expiry GitHub reports",
+          "commit": "6faeca0"
+        },
+        {
+          "description": "AWS SSM: `Writer` sets a parameter as a `SecureString`, optionally with a named KMS key",
+          "commit": "95457d1"
+        },
+        {
+          "description": "`cli.Install` mounts the install command alone in a host tool's command tree",
+          "commit": "a345cd7"
+        }
+      ],
+      "changed": [
+        {
+          "description": "A GitHub request GitHub refuses, other than 404, is returned as a `*github.StatusError` with its status code; the message is unchanged",
+          "commit": "6faeca0"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Installing a value, in the README, the guide and the specifications",
+          "commit": "57c9785"
+        }
+      ]
+    },
+    {
       "version": "v0.6.0",
       "date": "2026-11-21",
       "highlights": [
