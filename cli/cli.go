@@ -85,6 +85,10 @@ type Options struct {
 	// Prober checks a value before install writes it; a GitHub prober
 	// when nil.
 	Prober credforge.Prober
+	// Tool is how the setup runbook's commands run credforge, such as a
+	// host tool's ["bin/infra", "credentials"], read once the command line
+	// is parsed; credforge with this run's file flags when nil.
+	Tool func() []string
 }
 
 type env struct {
@@ -94,7 +98,8 @@ type env struct {
 	targets  string
 }
 
-// New returns the command tree: check, generate, install, review and schema.
+// New returns the command tree: check, generate, install, review, setup and
+// schema.
 func New(o Options) *cobra.Command {
 	if o.Use == "" {
 		o.Use = "credforge"
@@ -105,7 +110,7 @@ func New(o Options) *cobra.Command {
 	e := &env{opts: o.withDefaults()}
 	cmd := &cobra.Command{Use: o.Use, Short: o.Short, SilenceUsage: true, SilenceErrors: true}
 	e.flags(cmd.PersistentFlags())
-	cmd.AddCommand(e.check(), e.generate(), e.install(), e.review(), e.schema())
+	cmd.AddCommand(e.check(), e.generate(), e.install(), e.review(), e.setup(), e.schema())
 	return cmd
 }
 
