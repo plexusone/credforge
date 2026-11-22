@@ -790,6 +790,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../../../releases/v0.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.9.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../../../releases/v0.8.0/" class="md-nav__link">
         
   
@@ -1443,6 +1471,15 @@ or connection error.</p>
   <code>Generator.Apply</code> makes each value with <code>crypto/rand</code> and writes it
   through a <code>Creator</code> when the writer has one (SSM <code>PutParameter</code> without
   overwrite), so a value set after the check is never replaced.</li>
+<li><code>runbook.Build</code> turns the registry into a systemspec-runbook runbook
+  for one system and, optionally, environment: a phase per need, steps in
+  <code>Registry.SetupOrder</code>, a prerequisite's steps, one step per provisioner
+  command and one for every value <code>generate</code> makes, and each issued
+  credential's console, steps, entitlements, <code>install</code> and configuration
+  changes. Every step that sets a credential is checked with
+  <code>check --only &lt;id&gt;</code>. A dependency on a later step is an error, naming
+  the entries. <code>setup</code> mounts systemspec-runbook's commands over it, with
+  the progress log under <code>--progress</code>.</li>
 <li><code>install</code> reads the value hidden from a terminal, or from standard input
   with <code>--stdin --yes</code>; never from an argument. It confirms the plan before
   asking for the value.</li>
