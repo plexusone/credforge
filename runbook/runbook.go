@@ -235,6 +235,24 @@ func (b *builder) credential(c credspec.Credential) {
 	}
 }
 
+// usage says how to use the runbook: what to record first, the access its
+// commands use, how a run goes, and how to check it.
+func (b *builder) usage() string {
+	cmd := func(args ...string) string { return code(strings.Join(b.cmd(args...), " ")) }
+	return strings.Join([]string{
+		"**Before the first run**, record what is already in place, so the steps for it show as done: " +
+			cmd("check", "--include-planned", "--record") + ".",
+		"**Access.** The commands use your own: a GitHub token in `GITHUB_TOKEN` or `GH_TOKEN` for Actions secrets " +
+			"(`export GITHUB_TOKEN=$(gh auth token)`), and your AWS profile in `AWS_PROFILE` for parameters. " +
+			"Neither is a credential this runbook makes.",
+		"**Run a step** with " + cmd(b.setupArgs("run", "<step>")...) + ". It asks before each command, waits while " +
+			"you do an issuer's part, then checks the step and records it. Or follow the step by hand and record it with " +
+			cmd(b.setupArgs("record", "<step>", "done")...) + ". install and generate record each credential themselves.",
+		"**Check** every step with " + cmd(b.setupArgs("verify")...) + ". Each check is " + cmd("check", "--only", "<credential>") +
+			", which reads names and never values. The run's progress is kept beside the event log; commit both.",
+	}, "\n\n")
+}
+
 // setupArgs are the setup command's arguments for this runbook.
 func (b *builder) setupArgs(args ...string) []string {
 	out := []string{"setup", "--system", b.o.System}
@@ -401,9 +419,7 @@ func (b *builder) runbook(done []string) (*rb.Runbook, error) {
 		ID:      "credentials-" + strings.ReplaceAll(b.scope(), " ", "-"),
 		Title:   b.scope() + " credentials",
 		Summary: b.summary(done),
-		Usage: fmt.Sprintf("Run a step with %s, or follow it by hand. Each step is checked with %s, "+
-			"which reads names and never values. install and generate record what they set; record anything set by hand.",
-			code(strings.Join(b.cmd(b.setupArgs("run", "<step>")...), " ")), code(strings.Join(b.cmd("check"), " "))),
+		Usage:   b.usage(),
 	}
 	// Phases are numbered in the order of the needs asked for, and their
 	// steps renumbered to match.
