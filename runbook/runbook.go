@@ -503,25 +503,76 @@ func how(c credspec.Credential) string {
 	return string(c.Generation.Method) + ", by hand"
 }
 
-// counts is a line counting the credentials by need and by how they are
-// made, and the prerequisites.
+// party is who sets a credential up, as the summary groups them.
+type party int
+
+const (
+	// partyYou are the credentials a person creates and sets.
+	partyYou party = iota
+	// partyTool are those a tool makes and stores, run by a person, who
+	// reviews them.
+	partyTool
+	// partyOther are those an agent or a system sets up, or that are
+	// derived from others.
+	partyOther
+)
+
+// whoOf says who sets c up, who creates it and who sets it in its stores.
+func whoOf(c credspec.Credential) (party, string, string) {
+	p := c.Generation.Provisioner
+	runner := func(a credspec.Actor) string {
+		switch a {
+		case credspec.ActorAgent:
+			return "an agent runs it"
+		case credspec.ActorSystem:
+			return "it runs on its own"
+		}
+		return "you run it"
+	}
+	switch {
+	case credforge.Generates(c):
+		by := credspec.ActorHuman
+		if p != nil {
+			by = p.RunBy
+		}
+		pt := partyTool
+		if by != credspec.ActorHuman {
+			pt = partyOther
+		}
+		return pt, "credforge generate; " + runner(by), "the same command"
+	case p != nil && p.Stores:
+		pt := partyTool
+		if p.RunBy != credspec.ActorHuman {
+			pt = partyOther
+		}
+		return pt, p.Tool + "; " + runner(p.RunBy), "the same tool"
+	case c.Generation.Method == credspec.MethodDerived:
+		return partyOther, "made from the credentials it depends on", "as its steps say"
+	}
+	who := c.SetUpBy()
+	creates := "you, by hand"
+	if c.Generation.Method == credspec.MethodIssued {
+		creates = "you, at " + c.Issuer.Type
+	}
+	switch who {
+	case credspec.ActorAgent:
+		return partyOther, strings.Replace(creates, "you", "an agent", 1), "an agent, with install"
+	case credspec.ActorSystem:
+		return partyOther, strings.Replace(creates, "you", "a system", 1), "a system"
+	}
+	return partyYou, creates, "you, with install"
+}
+
+// counts is a line counting the credentials by need and by who sets them
+// up, and the prerequisites.
 func (b *builder) counts() string {
 	byNeed := map[credspec.Need]int{}
-	var generated, tools, issued, other int
+	byParty := map[party]int{}
 	for _, id := range b.selected {
 		c, _ := b.reg.Find(id)
 		byNeed[b.needOf[id]]++
-		p := c.Generation.Provisioner
-		switch {
-		case credforge.Generates(c):
-			generated++
-		case p != nil && p.Stores:
-			tools++
-		case c.Generation.Method == credspec.MethodIssued:
-			issued++
-		default:
-			other++
-		}
+		pt, _, _ := whoOf(c)
+		byParty[pt]++
 	}
 	var needs []string
 	for _, n := range b.o.Needs {
@@ -533,9 +584,10 @@ func (b *builder) counts() string {
 			needs = append(needs, fmt.Sprintf("%d %s", byNeed[n], word))
 		}
 	}
-	line := fmt.Sprintf("**%d credentials**: %s. %d generated, %d made by tools, %d from issuers", len(b.selected), strings.Join(needs, ", "), generated, tools, issued)
-	if other > 0 {
-		line += fmt.Sprintf(", %d otherwise", other)
+	line := fmt.Sprintf("**%d credentials**: %s. **You create and set %d**; tools you run make and store %d, for you to review",
+		len(b.selected), strings.Join(needs, ", "), byParty[partyYou], byParty[partyTool])
+	if byParty[partyOther] > 0 {
+		line += fmt.Sprintf("; %d are set up otherwise", byParty[partyOther])
 	}
 	prereqs := 0
 	for id := range b.needOf {
@@ -544,25 +596,72 @@ func (b *builder) counts() string {
 		}
 	}
 	if prereqs > 0 {
-		line += fmt.Sprintf("; and %d to set up at issuers first", prereqs)
+		things := "things"
+		if prereqs == 1 {
+			things = "thing"
+		}
+		line += fmt.Sprintf(". You also set up %d %s at issuers first", prereqs, things)
 	}
 	return line + "."
 }
 
-// table lists each credential: when it is needed, how it is made, its
+// table lists the credentials in step order, one table for those you
+// create and set, one for those tools you run make, and one for the rest:
+// when each is needed, how it is made, who creates and who sets it, its
 // issuer, its step, and what it shares with other systems.
 func (b *builder) table() string {
-	rows := []string{"| Credential | Needed | How it is made | Issuer | Step | Shared with other systems |", "|---|---|---|---|---|---|"}
-	for _, id := range b.selected {
-		c, _ := b.reg.Find(id)
-		issuer := c.Issuer.Type
-		if c.Issuer.Account != "" {
-			issuer += " " + c.Issuer.Account
-		}
-		rows = append(rows, fmt.Sprintf("| %s<br>%s | %s | %s | %s | [[step:%s]] | %s |",
-			cell(c.Name), code(c.ID), b.needOf[id], cell(how(c)), cell(issuer), b.stepOf[id], cell(b.shared(c))))
+	groups := []struct {
+		pt    party
+		title string
+	}{
+		{partyYou, "You create and set these"},
+		{partyTool, "Tools you run make and store these; review them"},
+		{partyOther, "Set up otherwise"},
 	}
-	return strings.Join(rows, "\n")
+	var out []string
+	for _, g := range groups {
+		rows := []string{"| Credential | Needed | How it is made | Who creates it | Who sets it | Issuer | Step | Shared with other systems |",
+			"|---|---|---|---|---|---|---|---|"}
+		n := 0
+		for _, id := range b.selected {
+			c, _ := b.reg.Find(id)
+			pt, creates, sets := whoOf(c)
+			if pt != g.pt {
+				continue
+			}
+			n++
+			issuer := c.Issuer.Type
+			if c.Issuer.Account != "" {
+				issuer += " " + c.Issuer.Account
+			}
+			if then := deployed(c); then != "" {
+				sets += "; " + then
+			}
+			rows = append(rows, fmt.Sprintf("| %s<br>%s | %s | %s | %s | %s | %s | [[step:%s]] | %s |",
+				cell(c.Name), code(c.ID), b.needOf[id], cell(how(c)), cell(creates), cell(sets), cell(issuer), b.stepOf[id], cell(b.shared(c))))
+		}
+		if n == 0 {
+			continue
+		}
+		out = append(out, fmt.Sprintf("**%s (%d)**", g.title, n), strings.Join(rows, "\n"))
+	}
+	return strings.Join(out, "\n\n")
+}
+
+// deployed says what a deploy does with c after it is set: copies it to
+// the host, or passes it to a process such as a migration; "" when
+// nothing renders it.
+func deployed(c credspec.Credential) string {
+	for _, s := range c.Stores {
+		if s.Role != credspec.RoleRendered {
+			continue
+		}
+		if s.Type == credspec.StoreProcessEnv {
+			return "the deploy passes it to " + cmp.Or(s.Path, "the process") + " only"
+		}
+		return "the deploy copies it to the host"
+	}
+	return ""
 }
 
 // shared names the other systems whose credentials come from the same
