@@ -47,8 +47,8 @@ github.com/pb33f/ordered-map/v2 v2.3.2 h1:wDyaZ2Pv9QLh64X4utCeD5Zoi9nIv2aW3lwv17
 github.com/pb33f/ordered-map/v2 v2.3.2/go.mod h1:1OhFrXu3OYw3kM+FXF+Ug3ugmmZ9LE8z0JfQMLvtV0w=
 github.com/plexusone/systemspec-credential v0.4.0 h1:s4FVOuHt7nSxXt/FAFf8YoYvOpqNl4ePhPhVHErUhxI=
 github.com/plexusone/systemspec-credential v0.4.0/go.mod h1:1JcZJ2iQ3KADDO0aZHMdMeQCYP31MrSo1+U8ErIlPDs=
-github.com/plexusone/systemspec-runbook v0.0.0-20261122095952-9509c79ac30a h1:Woiez1wDkwBWBOOvCI8DzY+40zOlMxyh1OSzCprhl2M=
-github.com/plexusone/systemspec-runbook v0.0.0-20261122095952-9509c79ac30a/go.mod h1:6hHVUlfn0Nvlp6zeukI8ugUAW5qthx9B7fizKgOZqSo=
+github.com/plexusone/systemspec-runbook v0.1.0 h1:DyHfpet1mlX5jWfF7uvLOfwevLtDoTrlBZCfpghPgSw=
+github.com/plexusone/systemspec-runbook v0.1.0/go.mod h1:6hHVUlfn0Nvlp6zeukI8ugUAW5qthx9B7fizKgOZqSo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
