@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.84.0
 	github.com/grokify/oscompat v0.13.0
 	github.com/invopop/jsonschema v0.14.0
-	github.com/plexusone/systemspec-credential v0.3.0
+	github.com/plexusone/systemspec-credential v0.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	golang.org/x/crypto v0.59.0
