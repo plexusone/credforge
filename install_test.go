@@ -206,3 +206,16 @@ func TestInstallApplyFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestInstallRefusesStoresOfDifferentValues(t *testing.T) {
+	c := cred("oauth", credspec.StatusActive, ssm("/app/prod/CLIENT_SECRET"), ssm("/app/prod/CLIENT_ID"))
+	reg := credspec.NewRegistry(c)
+	in := installer(&fakeWriter{}, nil, credspec.StoreAWSSSM)
+	if _, err := in.Plan(reg, credspec.NewLog(), "oauth"); err == nil || !strings.Contains(err.Error(), "CLIENT_SECRET, CLIENT_ID") {
+		t.Errorf("two values: %v", err)
+	}
+	// One value in two repositories is one value.
+	if got := credforge.ValueNames([]credspec.Store{gha(repo, "TOKEN"), gha("example-org/api", "TOKEN")}); len(got) != 1 {
+		t.Errorf("value names %v", got)
+	}
+}

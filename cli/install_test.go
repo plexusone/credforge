@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -211,5 +212,41 @@ func TestGenerateCommand(t *testing.T) {
 	}
 	if h := log.History("app/prod/SESSION_KEY"); len(h) != 1 || h[0].Type != credspec.EventCreated {
 		t.Errorf("history %+v", h)
+	}
+}
+
+func TestSetupCommand(t *testing.T) {
+	dir := fixture(t, "https://github.example")
+	cmd := New(Options{})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"setup", "--system", "example-app", "--env", "prod", "list",
+		"--registry", filepath.Join(dir, "credentials.json"), "--events", filepath.Join(dir, "events.json")})
+	if err := cmd.ExecuteContext(context.Background()); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "1.3") {
+		t.Errorf("list:\n%s", out.String())
+	}
+	// The progress log is named for the system and environment.
+	cmd = New(Options{})
+	out.Reset()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"setup", "--system", "example-app", "--env", "prod", "record", "1.1", "started",
+		"--registry", filepath.Join(dir, "credentials.json"), "--events", filepath.Join(dir, "events.json")})
+	if err := cmd.ExecuteContext(context.Background()); err != nil {
+		t.Fatalf("record: %v\n%s", err, out.String())
+	}
+	if _, err := os.Stat(filepath.Join(dir, "setup-example-app-prod.json")); err != nil {
+		t.Errorf("progress log: %v", err)
+	}
+	cmd = New(Options{})
+	out.Reset()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"setup", "--system", "example-app", "--env", "prod", "export",
+		"--registry", filepath.Join(dir, "credentials.json"), "--events", filepath.Join(dir, "events.json")})
+	if err := cmd.ExecuteContext(context.Background()); err != nil || !strings.Contains(out.String(), `"id": "credentials-example-app-prod"`) {
+		t.Errorf("export: %v\n%s", err, out.String())
 	}
 }
