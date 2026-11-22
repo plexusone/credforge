@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -87,6 +89,9 @@ func (in *Installer) Plan(reg *credspec.Registry, log *credspec.Log, id string) 
 	}
 	if p := c.Generation.Provisioner; p != nil && p.Stores {
 		return nil, fmt.Errorf("install: %s is made and stored by %s; run %q instead", id, p.Tool, p.Command)
+	}
+	if names := ValueNames(c.Primary()); len(names) > 1 {
+		return nil, fmt.Errorf("install: %s's primary stores are named for different values (%s), so one value cannot go in all of them; give each value its own credential", id, strings.Join(names, ", "))
 	}
 	plan := &InstallPlan{Credential: id, Event: credspec.EventCreated}
 	if rec := log.Record(id); rec.Rotated != nil || rec.Created != nil {
@@ -218,4 +223,22 @@ func written(keys []Key) string {
 		names[i] = k.String()
 	}
 	return "; already written: " + strings.Join(names, ", ") + "; nothing was recorded, so run the install again"
+}
+
+// ValueNames are the distinct names of the values in stores: each path's
+// last element, such as API_KEY for /app/prod/API_KEY. One value stored in
+// several places has one name; a credential whose stores have several,
+// such as an OAuth client's secret and its ID, holds more than one value.
+func ValueNames(stores []credspec.Store) []string {
+	var out []string
+	for _, s := range stores {
+		if s.Path == "" {
+			continue
+		}
+		name := path.Base(s.Path)
+		if !slices.Contains(out, name) {
+			out = append(out, name)
+		}
+	}
+	return out
 }
