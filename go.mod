@@ -9,7 +9,7 @@ require (
 	github.com/grokify/oscompat v0.13.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/plexusone/systemspec-credential v0.4.0
-	github.com/plexusone/systemspec-runbook v0.1.0
+	github.com/plexusone/systemspec-runbook v0.2.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	golang.org/x/crypto v0.59.0
@@ -17,6 +17,7 @@ require (
 )
 
 require (
+	github.com/a-h/templ v0.3.1118 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.21.3 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.12 // indirect
