@@ -178,3 +178,32 @@ func TestPhasesFollowNeedsAndRequiresMayCrossKinds(t *testing.T) {
 		t.Errorf("optional steps %v, want %v", got, want)
 	}
 }
+
+func TestSummaryCountsAndShares(t *testing.T) {
+	reg := registry()
+	// Another system's token from the same GitHub organization.
+	reg.Credentials = append(reg.Credentials, cred("example-app/prod/ORG_TOKEN", func(c *credspec.Credential) {
+		c.Generation.Method = credspec.MethodIssued
+		c.Issuer = credspec.Issuer{Type: credspec.IssuerGitHub, Account: "example-org"}
+	}), cred("other-app/prod/ORG_TOKEN", func(c *credspec.Credential) {
+		c.Generation.Method = credspec.MethodIssued
+		c.Issuer = credspec.Issuer{Type: credspec.IssuerGitHub, Account: "example-org"}
+	}))
+	r, err := Build(reg, Options{System: "example-app", Environment: "prod", Needs: []credspec.Need{credspec.NeedLaunch, credspec.NeedLater}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"**6 credentials**: 5 for launch, 1 later. 1 generated, 1 made by tools, 3 from issuers, 1 otherwise; and 1 to set up at issuers first.",
+		"| ORG_TOKEN<br>`example-app/prod/ORG_TOKEN` | launch | from github, installed | github example-org | [[step:1.6]] | same issuer account as other-app |",
+		"| SESSION_KEY<br>`example-app/prod/SESSION_KEY` | launch | generated (hex32) | self | [[step:1.2]] | none |",
+	} {
+		if !strings.Contains(r.Summary, want) {
+			t.Errorf("the summary lacks\n%s\nin\n%s", want, r.Summary)
+		}
+	}
+	// The table follows the steps.
+	if strings.Index(r.Summary, "LATER_KEY") < strings.Index(r.Summary, "ORG_TOKEN") {
+		t.Error("a later credential is listed before one for launch")
+	}
+}
