@@ -9,6 +9,7 @@ require (
 	github.com/grokify/oscompat v0.13.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/plexusone/systemspec-credential v0.4.0
+	github.com/plexusone/systemspec-runbook v0.0.0-20261122095952-9509c79ac30a
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	golang.org/x/crypto v0.59.0
@@ -33,5 +34,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pb33f/go-yaml v0.2.0 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.2 // indirect
+	github.com/yuin/goldmark v1.8.7 // indirect
 	golang.org/x/sys v0.50.0 // indirect
 )
