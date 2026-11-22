@@ -205,9 +205,27 @@ or connection error.
 
 ## Phase 3 design notes (writes)
 
-- `Destination` is the write side of a store type: `Set(ctx, Key, value)`.
+- `Writer` is the write side of a store type: `Write(ctx, Key, value)`.
   GitHub Actions secrets are written sealed with the repository's public key
-  (libsodium sealed box); SSM parameters as `SecureString`.
+  (libsodium sealed box); SSM parameters as `SecureString`, replacing the
+  current value.
+- `Installer.Plan` lists the writes for one credential: every store with a
+  path that a binding reaches, except rendered stores, which a deploy
+  writes. A credential whose provisioner stores it is refused, since the
+  tool also sets it at the issuer. `Installer.Apply` runs the `Prober`, then
+  each write in order, then appends `created` (or `rotated` when the log
+  has a value) with the expiry and `verified` with the checks that passed.
+  A failed probe writes nothing; a failed write records nothing and names
+  the stores already written, so the install is run again.
+- The GitHub prober uses the value itself as the token: it reads each
+  `github.com/<owner>/<repo>` entitlement's repository, and its commits
+  when the access names contents, and takes the expiry from GitHub's
+  `GitHub-Authentication-Token-Expiration` header. A 404 means the token
+  lacks the repository or the organization has not approved it; a 401
+  means it is mistyped, expired or revoked.
+- `install` reads the value hidden from a terminal, or from standard input
+  with `--stdin --yes`; never from an argument. It confirms the plan before
+  asking for the value.
 - The master copy is named by an OmniVault URI on the credential (a tag or
   the targets file, not a value), read once into memory, written to each
   store, then zeroed where the language allows.
@@ -216,9 +234,13 @@ or connection error.
 
 ## Security
 
-- No value is read in Phases 1 and 2. Tests assert no observer calls a
+- No value is ever read from a store. Tests assert no observer calls a
   value-returning endpoint (`GetParameter`, `GetSecretValue`, secret
   contents).
+- A value is read only by `install`, from the terminal or standard input,
+  held in memory for the writes, and never printed, logged or saved; tests
+  assert it is in no output and that the request to GitHub holds it only
+  sealed.
 - Tokens are read from the environment, never from flags, and never printed
   or logged; HTTP errors are reported without request headers.
 - The targets file and reports contain names, accounts and dates. They are

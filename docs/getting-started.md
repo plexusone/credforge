@@ -62,6 +62,21 @@ credforge check --record --fail-on ''
 Logs each unrecorded store as `created` and each changed one as `deployed`,
 at the time the store reports, by `credforge`. The registry is never edited.
 
+## Install a value
+
+When an issuer shows you a new value, such as a GitHub token, install it
+into every store the registry lists for it:
+
+```bash
+credforge install app/ci/deploy --dry-run   # list the writes
+credforge install app/ci/deploy             # confirm, then paste the value
+```
+
+It checks the value first (a GitHub token must read each repository its
+entitlements name), writes each store, and records `created` or `rotated`
+with the expiry, then `verified`. A later `credforge check` shows the
+stores as present.
+
 ## In CI
 
 Run `credforge check` on a schedule with a read-only token; the default

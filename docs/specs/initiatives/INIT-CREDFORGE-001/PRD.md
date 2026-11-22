@@ -95,21 +95,26 @@ providers and writing them to every store the registry lists.
 
 ### Phase 3: install and rotate
 
-13. **Push.** Write a value from a master copy, named by an OmniVault URI
+13. **Install.** Take a value the operator has, such as a token an issuer
+    just showed once, read it hidden from the terminal, check it works
+    (a GitHub token reads each repository its entitlements name), write it
+    to each store the registry lists, and record it with its expiry. One
+    command replaces setting each store by hand and recording it after.
+14. **Push.** Write a value from a master copy, named by an OmniVault URI
     (`op://…`, `aws-sm://…`, `keyring://…`), to each store the registry
     lists for that credential, then record `deployed` per store.
-14. **Rotate.** For credentials the operator generates (random secrets, key
+15. **Rotate.** For credentials the operator generates (random secrets, key
     pairs), make a new value in memory, write it to the master copy and
     every store, and record `rotated`. Issuer-made credentials print the
     issuer step and then push.
-15. **Plans first.** Every write runs as a plan that lists each store it
+16. **Plans first.** Every write runs as a plan that lists each store it
     would change and asks before applying. `--dry-run` only prints it.
 
 ### Phase 4: frameworks
 
-16. An app framework can declare the credentials an app reads, so credforge
+17. An app framework can declare the credentials an app reads, so credforge
     checks an app's configuration against the registry.
-17. A connections library that stores tenants' credentials can report their
+18. A connections library that stores tenants' credentials can report their
     metadata (names, issuer, last rotation) as observations, never values.
 
 ## Non-goals

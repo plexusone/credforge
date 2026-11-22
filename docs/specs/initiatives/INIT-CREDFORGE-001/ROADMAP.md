@@ -31,10 +31,12 @@ Released in v0.1.0.
 
 | ID | Item | Status |
 |---|---|---|
-| RMI-CREDFORGE-010 | Destinations: write GitHub Actions secrets (sealed) and SSM `SecureString` parameters | planned |
+| RMI-CREDFORGE-010 | Destinations: write GitHub Actions secrets (sealed) and SSM `SecureString` parameters | done |
 | RMI-CREDFORGE-011 | `push`: from a master copy named by an OmniVault URI to every store, recording `deployed` | planned |
 | RMI-CREDFORGE-012 | `rotate`: generate self-issued values, write the master copy and every store, record `rotated` | planned |
 | RMI-CREDFORGE-013 | Plans: every write listed and confirmed before it applies; `--dry-run` | planned |
+| RMI-CREDFORGE-018 | `install`: a value read once from the terminal, written to every store, recorded with its expiry, after its writes are listed and confirmed | done |
+| RMI-CREDFORGE-019 | Probes: a GitHub token reads each repository its entitlements name before it is written, and GitHub's reported expiry is recorded | done |
 
 ## Phase 4: Frameworks
 

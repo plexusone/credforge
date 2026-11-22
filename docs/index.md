@@ -13,8 +13,9 @@ and its event log: the secret a workflow needs that was never set, the token
 regenerated at the issuer but never updated in one repository, the value
 changed with nothing recorded.
 
-> **Status:** v0.1.0 checks and records; it never writes a value. Installing
-> and rotating values through [OmniVault](https://github.com/plexusone/omnivault)
+> **Status:** credforge checks, records, serves a review page and installs
+> a value you supply, after checking it works. Pushing values from and
+> rotating them through [OmniVault](https://github.com/plexusone/omnivault)
 > providers follows. See the
 > [roadmap](specs/initiatives/INIT-CREDFORGE-001/ROADMAP.md).
 
@@ -81,12 +82,64 @@ unlisted      -              aws-ssm:hosting:/app/prod/OLD                no cre
 The exit status is 0 when nothing is in a `--fail-on` state, 1 when
 something is, and 2 on an error.
 
+## Install a value
+
+`credforge install` sets one credential's value in every store the
+registry lists for it, then records it. It replaces running
+`gh secret set` once per repository and recording the change afterwards.
+
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+credforge install app/ci/deploy --registry credentials.json --events events.json --targets targets.json
+```
+
+```text
+install app/ci/deploy: a new value (rotated), replacing the one made 2026-03-11
+  check  the value against its entitlements before writing
+  write  github-actions:example-org/web:DEPLOY_TOKEN
+  write  github-actions:example-org/api:DEPLOY_TOKEN
+Write 2 store(s)? [y/N] y
+Value of app/ci/deploy (hidden):
+checked  the token reads github.com/example-org/lib (contents: read)
+wrote    github-actions:example-org/web:DEPLOY_TOKEN
+wrote    github-actions:example-org/api:DEPLOY_TOKEN
+recorded rotated in events.json, expires 2027-03-11
+recorded verified in events.json
+```
+
+- **The writes come first.** It lists each store and asks before it reads
+  the value. `--dry-run` lists them and stops. Stores no binding reaches,
+  such as a password manager, are listed for you to set.
+- **The value is read once.** It is read hidden from the terminal, or from
+  standard input with `--stdin --yes`. It is never an argument, never
+  written to disk and never printed. GitHub receives it sealed with the
+  repository's public key.
+- **The value is checked before anything is written.** A token GitHub
+  issues must read each `github.com/<owner>/<repo>` its entitlements name.
+  A missing repository, an organization's approval still pending or an
+  expired token stops the install with the reason. `--no-probe` skips the
+  check.
+- **It is recorded.** The event is `created`, or `rotated` when the log
+  already has a value. It carries the expiry from `--expires`, or else the
+  expiry GitHub reports for the token. A `verified` event lists the checks
+  that passed.
+- **Refusals.** A credential that a provisioner makes and stores is refused,
+  with the provisioner's command to run instead, and so is a retired
+  credential.
+
+Writing needs more access than checking:
+
+| Store | Access needed to write |
+|---|---|
+| GitHub Actions secrets | The `repo` scope, or for a fine-grained token Secrets: read and write on each repository |
+| AWS SSM Parameter Store | `ssm:PutParameter`, and `kms:Encrypt` on the parameters' key |
+
 ## Connectors
 
 | Store | What is listed | Never called |
 |---|---|---|
-| GitHub Actions secrets (`github-actions`) | Repository secret names and when each was set; workflow files' `secrets.NAME` | Secret values cannot be read through GitHub's API |
-| AWS Systems Manager Parameter Store (`aws-ssm`) | Parameter names and last change, one directory level at a time | `GetParameter`, `GetParameters` |
+| GitHub Actions secrets (`github-actions`) | Repository secret names and when each was set; workflow files' `secrets.NAME`; `install` writes a repository secret, sealed | Secret values cannot be read through GitHub's API |
+| AWS Systems Manager Parameter Store (`aws-ssm`) | Parameter names and last change, one directory level at a time; `install` writes a `SecureString` | `GetParameter`, `GetParameters` |
 
 ## In Go
 
