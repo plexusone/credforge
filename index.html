@@ -370,6 +370,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#generate-random-values-and-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate random values and keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#connectors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -710,6 +721,34 @@
   
   
     <li class="md-nav__item">
+      <a href="releases/v0.8.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.8.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="releases/v0.7.0/" class="md-nav__link">
         
   
@@ -977,6 +1016,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#generate-random-values-and-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate random values and keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#connectors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1053,8 +1103,9 @@ and its event log: the secret a workflow needs that was never set, the token
 regenerated at the issuer but never updated in one repository, the value
 changed with nothing recorded.</p>
 <blockquote>
-<p><strong>Status:</strong> credforge checks, records, serves a review page and installs
-a value you supply, after checking it works. Pushing values from and
+<p><strong>Status:</strong> credforge checks, records, serves a review page, installs a
+value you supply after checking it works, and generates random values
+and keys where they are missing. Pushing values from and
 rotating them through <a href="https://github.com/plexusone/omnivault">OmniVault</a>
 providers follows. See the
 <a href="specs/initiatives/INIT-CREDFORGE-001/ROADMAP/">roadmap</a>.</p>
@@ -1226,6 +1277,27 @@ registry lists for it, then records it. It replaces running
 </tr>
 </tbody>
 </table>
+<h2 id="generate-random-values-and-keys">Generate random values and keys<a class="headerlink" href="#generate-random-values-and-keys" title="Permanent link">&para;</a></h2>
+<p><code>credforge generate</code> makes the values the registry says a tool can make:
+a credential whose <code>generation.format</code> is set (<code>hex32</code>, <code>base64url32</code>,
+<code>p256-pem</code>, <code>ed25519-pem</code> or <code>rsa3072-pem</code>) and whose provisioner is
+<code>credforge generate</code>, or none.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>credforge<span class="w"> </span>generate<span class="w"> </span>--only<span class="w"> </span><span class="s1">&#39;app/prod/*&#39;</span><span class="w"> </span>--dry-run
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>make   app/prod/SESSION_KEY (hex32) in aws-ssm:hosting:/app/prod/SESSION_KEY
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>leave  app/prod/SIGNING_KEY: every store holds a value
+</code></pre></div>
+<ul>
+<li><strong>Only where missing.</strong> It finds what is missing with a check, which
+  reads names and never values. A credential is made only when none of
+  its primary stores holds a value. A parameter is created only if it
+  still does not exist when written, so a value is never replaced.</li>
+<li><strong>Never shown.</strong> The value is made in memory with <code>crypto/rand</code>,
+  written to each primary store and recorded as <code>created</code>. It is never
+  printed.</li>
+<li><strong>Asks first.</strong> It lists what it will make; <code>--yes</code> skips the question
+  and <code>--dry-run</code> stops after the list.</li>
+</ul>
 <h2 id="connectors">Connectors<a class="headerlink" href="#connectors" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1251,22 +1323,22 @@ registry lists for it, then records it. It replaces running
 <h2 id="in-go">In Go<a class="headerlink" href="#in-go" title="Permanent link">&para;</a></h2>
 <p>The comparison is a pure function, and the command tree mounts in a host
 tool that builds its registry in Go:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">cmd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">cli</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">cli</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">Use</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;observe&quot;</span><span class="p">,</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">Registry</span><span class="p">:</span><span class="w"> </span><span class="nx">buildRegistry</span><span class="p">,</span><span class="w">                       </span><span class="c1">// func() (*credspec.Registry, error)</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">Targets</span><span class="p">:</span><span class="w">  </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">targets</span><span class="p">.</span><span class="nx">File</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">myTargets</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">},</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">cmd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">cli</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">cli</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">Use</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;observe&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nx">Registry</span><span class="p">:</span><span class="w"> </span><span class="nx">buildRegistry</span><span class="p">,</span><span class="w">                       </span><span class="c1">// func() (*credspec.Registry, error)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nx">Targets</span><span class="p">:</span><span class="w">  </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">targets</span><span class="p">.</span><span class="nx">File</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">myTargets</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">})</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">rep</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Compare</span><span class="p">(</span><span class="nx">reg</span><span class="p">,</span><span class="w"> </span><span class="nx">log</span><span class="p">,</span><span class="w"> </span><span class="nx">scopes</span><span class="p">,</span><span class="w"> </span><span class="nx">observations</span><span class="p">,</span><span class="w"> </span><span class="nx">references</span><span class="p">,</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">Grace</span><span class="p">:</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">DefaultGrace</span><span class="p">,</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="p">})</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nx">events</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Record</span><span class="p">(</span><span class="nx">reg</span><span class="p">,</span><span class="w"> </span><span class="nx">log</span><span class="p">,</span><span class="w"> </span><span class="nx">rep</span><span class="p">,</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">DefaultGrace</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">rep</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Compare</span><span class="p">(</span><span class="nx">reg</span><span class="p">,</span><span class="w"> </span><span class="nx">log</span><span class="p">,</span><span class="w"> </span><span class="nx">scopes</span><span class="p">,</span><span class="w"> </span><span class="nx">observations</span><span class="p">,</span><span class="w"> </span><span class="nx">references</span><span class="p">,</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="nx">Grace</span><span class="p">:</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">DefaultGrace</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="p">})</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nx">events</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">Record</span><span class="p">(</span><span class="nx">reg</span><span class="p">,</span><span class="w"> </span><span class="nx">log</span><span class="p">,</span><span class="w"> </span><span class="nx">rep</span><span class="p">,</span><span class="w"> </span><span class="nx">credforge</span><span class="p">.</span><span class="nx">DefaultGrace</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="getting-started/">Getting started</a></li>
 <li><a href="specs/initiatives/INIT-CREDFORGE-001/PRD/">Specifications</a></li>
-<li><a href="releases/v0.7.0/">Releases</a></li>
+<li><a href="releases/v0.8.0/">Releases</a></li>
 </ul>
 <h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
 <p><a href="https://github.com/plexusone/credforge/blob/main/LICENSE">MIT</a></p>
