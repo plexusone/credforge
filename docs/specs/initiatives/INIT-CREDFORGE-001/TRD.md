@@ -223,6 +223,13 @@ or connection error.
   `GitHub-Authentication-Token-Expiration` header. A 404 means the token
   lacks the repository or the organization has not approved it; a 401
   means it is mistyped, expired or revoked.
+- `Generator.Plan` runs a check limited to the credentials it makes (a
+  `generation.format`, and no provisioner or `credforge generate`) and
+  makes one only when every primary store is checked and missing; one some
+  of whose stores hold a value is left, since nothing is read to copy it.
+  `Generator.Apply` makes each value with `crypto/rand` and writes it
+  through a `Creator` when the writer has one (SSM `PutParameter` without
+  overwrite), so a value set after the check is never replaced.
 - `install` reads the value hidden from a terminal, or from standard input
   with `--stdin --yes`; never from an argument. It confirms the plan before
   asking for the value.

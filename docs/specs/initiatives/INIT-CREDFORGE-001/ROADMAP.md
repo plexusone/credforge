@@ -37,6 +37,7 @@ Released in v0.1.0.
 | RMI-CREDFORGE-013 | Plans: every write listed and confirmed before it applies; `--dry-run` | planned |
 | RMI-CREDFORGE-018 | `install`: a value read once from the terminal, written to every store, recorded with its expiry, after its writes are listed and confirmed | done |
 | RMI-CREDFORGE-019 | Probes: a GitHub token reads each repository its entitlements name before it is written, and GitHub's reported expiry is recorded | done |
+| RMI-CREDFORGE-020 | `generate`: make random values and keys from `generation.format` where no primary store holds one, create-only, recorded as `created` | done |
 
 ## Phase 4: Frameworks
 

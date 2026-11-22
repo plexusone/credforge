@@ -13,8 +13,9 @@ and its event log: the secret a workflow needs that was never set, the token
 regenerated at the issuer but never updated in one repository, the value
 changed with nothing recorded.
 
-> **Status:** credforge checks, records, serves a review page and installs
-> a value you supply, after checking it works. Pushing values from and
+> **Status:** credforge checks, records, serves a review page, installs a
+> value you supply after checking it works, and generates random values
+> and keys where they are missing. Pushing values from and
 > rotating them through [OmniVault](https://github.com/plexusone/omnivault)
 > providers follows. See the
 > [roadmap](specs/initiatives/INIT-CREDFORGE-001/ROADMAP.md).
@@ -133,6 +134,32 @@ Writing needs more access than checking:
 |---|---|
 | GitHub Actions secrets | The `repo` scope, or for a fine-grained token Secrets: read and write on each repository |
 | AWS SSM Parameter Store | `ssm:PutParameter`, and `kms:Encrypt` on the parameters' key |
+
+## Generate random values and keys
+
+`credforge generate` makes the values the registry says a tool can make:
+a credential whose `generation.format` is set (`hex32`, `base64url32`,
+`p256-pem`, `ed25519-pem` or `rsa3072-pem`) and whose provisioner is
+`credforge generate`, or none.
+
+```bash
+credforge generate --only 'app/prod/*' --dry-run
+```
+
+```text
+make   app/prod/SESSION_KEY (hex32) in aws-ssm:hosting:/app/prod/SESSION_KEY
+leave  app/prod/SIGNING_KEY: every store holds a value
+```
+
+- **Only where missing.** It finds what is missing with a check, which
+  reads names and never values. A credential is made only when none of
+  its primary stores holds a value. A parameter is created only if it
+  still does not exist when written, so a value is never replaced.
+- **Never shown.** The value is made in memory with `crypto/rand`,
+  written to each primary store and recorded as `created`. It is never
+  printed.
+- **Asks first.** It lists what it will make; `--yes` skips the question
+  and `--dry-run` stops after the list.
 
 ## Connectors
 
