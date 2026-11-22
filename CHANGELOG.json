@@ -9,6 +9,35 @@
   ],
   "releases": [
     {
+      "version": "v0.10.0",
+      "date": "2026-11-22",
+      "highlights": [
+        {
+          "description": "The setup runbook opens with what it sets up: a count, then a table per who does the work, what you create and set apart from what tools you run make and store for you to review"
+        }
+      ],
+      "added": [
+        {
+          "description": "A count of the setup runbook's credentials by need and by who sets them up, and the prerequisites at issuers",
+          "commit": "73d8145"
+        },
+        {
+          "description": "A table for each group, in step order: what you create and set, what tools you run make and store for you to review, and what is set up otherwise. Each row gives when it is needed, how it is made, who creates it and at which issuer and account, who sets it and in which stores, what the deploy then does with it, its linked step, and what it shares with other systems (the same issuer account, or a credential it needs)",
+          "commit": "518fe5f"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The usage section's commands are code blocks, to copy as they are",
+          "commit": "e0c0929"
+        },
+        {
+          "description": "Requires systemspec-runbook v0.2.0, whose HTML pages are built with templ, full width, with a copy button on every command",
+          "commit": "e0ebe7e"
+        }
+      ]
+    },
+    {
       "version": "v0.9.1",
       "date": "2026-11-22",
       "changed": [
