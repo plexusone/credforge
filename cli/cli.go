@@ -80,6 +80,11 @@ type Options struct {
 	// Connector replaces the connections the targets file describes; tests
 	// set it.
 	Connector func(*targets.File) credforge.Connector
+	// Writer replaces the install command's destinations; tests set it.
+	Writer func(*targets.File) func(storeType, account string) (credforge.Writer, error)
+	// Prober checks a value before install writes it; a GitHub prober
+	// when nil.
+	Prober credforge.Prober
 }
 
 type env struct {
@@ -89,7 +94,7 @@ type env struct {
 	targets  string
 }
 
-// New returns the command tree: check, review and schema.
+// New returns the command tree: check, install, review and schema.
 func New(o Options) *cobra.Command {
 	if o.Use == "" {
 		o.Use = "credforge"
@@ -100,7 +105,7 @@ func New(o Options) *cobra.Command {
 	e := &env{opts: o.withDefaults()}
 	cmd := &cobra.Command{Use: o.Use, Short: o.Short, SilenceUsage: true, SilenceErrors: true}
 	e.flags(cmd.PersistentFlags())
-	cmd.AddCommand(e.check(), e.review(), e.schema())
+	cmd.AddCommand(e.check(), e.install(), e.review(), e.schema())
 	return cmd
 }
 
@@ -141,6 +146,12 @@ func (o Options) withDefaults() Options {
 	}
 	if o.Connector == nil {
 		o.Connector = func(f *targets.File) credforge.Connector { return NewConnector(f) }
+	}
+	if o.Writer == nil {
+		o.Writer = defaultWriter
+	}
+	if o.Prober == nil {
+		o.Prober = &github.Prober{}
 	}
 	return o
 }
@@ -361,12 +372,19 @@ type Connector struct {
 	github map[string]*github.Client
 	aws    map[string]*awsssm.Observer
 	// newAWS connects to AWS; tests replace it.
-	newAWS func(ctx context.Context, profile, region string) (*awsssm.Observer, error)
+	newAWS     func(ctx context.Context, profile, region string) (*awsssm.Observer, error)
+	awsWriters map[string]*awsssm.Writer
+	// newAWSWriter connects to AWS for writes; tests replace it.
+	newAWSWriter func(ctx context.Context, profile, region string) (*awsssm.Writer, error)
 }
 
 // NewConnector returns a Connector for f.
 func NewConnector(f *targets.File) *Connector {
-	return &Connector{file: f, github: map[string]*github.Client{}, aws: map[string]*awsssm.Observer{}, newAWS: awsssm.New}
+	return &Connector{
+		file: f, github: map[string]*github.Client{},
+		aws: map[string]*awsssm.Observer{}, newAWS: awsssm.New,
+		awsWriters: map[string]*awsssm.Writer{}, newAWSWriter: awsssm.NewWriter,
+	}
 }
 
 // Observer returns the observer for a store, or nil when no binding
