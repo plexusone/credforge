@@ -439,7 +439,7 @@ func (c *Connector) githubClient(g *targets.GitHub) (*github.Client, error) {
 	if cl, ok := c.github[key]; ok {
 		return cl, nil
 	}
-	token, err := github.TokenFromEnv(g.TokenEnv)
+	token, err := github.Token(context.Background(), g.TokenEnv)
 	if err != nil {
 		return nil, err
 	}

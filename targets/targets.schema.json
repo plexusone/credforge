@@ -79,7 +79,7 @@
       "properties": {
         "tokenEnv": {
           "type": "string",
-          "description": "TokenEnv is the environment variable holding the token; GITHUB_TOKEN,\nthen GH_TOKEN, when empty. The token is never written here."
+          "description": "TokenEnv is the environment variable holding the token. When empty,\nGITHUB_TOKEN, then GH_TOKEN, then the GitHub CLI's (gh auth token).\nThe token is never written here."
         },
         "baseUrl": {
           "type": "string",

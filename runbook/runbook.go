@@ -246,9 +246,10 @@ func (b *builder) usage() string {
 	return strings.Join([]string{
 		"**Before the first run**, record what is already in place, so the steps for it show as done:",
 		block("check", "--include-planned", "--record"),
-		"**Access.** The commands use your own: a GitHub token in `GITHUB_TOKEN` or `GH_TOKEN` for Actions secrets, " +
-			"and your AWS profile in `AWS_PROFILE` for parameters. Neither is a credential this runbook makes.",
-		"```bash\nexport GITHUB_TOKEN=$(gh auth token)\nexport AWS_PROFILE=<profile>\n```",
+		"**Access.** The commands use your own: for Actions secrets, the GitHub CLI's sign-in (`gh auth login`), " +
+			"or a token in `GITHUB_TOKEN` or `GH_TOKEN`, which comes first; and your AWS profile in `AWS_PROFILE` for parameters. " +
+			"Neither is a credential this runbook makes.",
+		"```bash\nexport AWS_PROFILE=<profile>\n```",
 		"**Run a step.** It asks before each command, waits while you do an issuer's part, then checks the step and records it. " +
 			"install and generate record each credential themselves.",
 		block(b.setupArgs("run", "<step>")...),

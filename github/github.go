@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"slices"
@@ -60,6 +61,42 @@ func TokenFromEnv(name string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("github: no token: set %s", strings.Join(names, " or "))
+}
+
+// Token returns the token TokenFromEnv finds. When name is empty and
+// neither GITHUB_TOKEN nor GH_TOKEN is set, it asks the GitHub CLI for the
+// token it is signed in with, so a person signed in with gh need not export
+// one. A named variable is the only place looked: naming one says which
+// token to use.
+func Token(ctx context.Context, name string) (string, error) {
+	v, err := TokenFromEnv(name)
+	if err == nil || name != "" {
+		return v, err
+	}
+	v, ghErr := ghAuthToken(ctx)
+	if ghErr != nil {
+		return "", fmt.Errorf("github: no token: set GITHUB_TOKEN or GH_TOKEN, or sign in with gh auth login (%w)", ghErr)
+	}
+	return v, nil
+}
+
+// ghAuthToken runs gh auth token. The token is read from its output and
+// never logged.
+var ghAuthToken = func(ctx context.Context) (string, error) {
+	var out, stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, "gh", "auth", "token")
+	cmd.Stdout, cmd.Stderr = &out, &stderr
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return "", fmt.Errorf("gh auth token: %s", msg)
+		}
+		return "", fmt.Errorf("gh auth token: %w", err)
+	}
+	v := strings.TrimSpace(out.String())
+	if v == "" {
+		return "", errors.New("gh auth token: no token")
+	}
+	return v, nil
 }
 
 // Observe lists the Actions secrets of the repository s.Account

@@ -47,8 +47,9 @@ type Binding struct {
 
 // GitHub is how GitHub is reached.
 type GitHub struct {
-	// TokenEnv is the environment variable holding the token; GITHUB_TOKEN,
-	// then GH_TOKEN, when empty. The token is never written here.
+	// TokenEnv is the environment variable holding the token. When empty,
+	// GITHUB_TOKEN, then GH_TOKEN, then the GitHub CLI's (gh auth token).
+	// The token is never written here.
 	TokenEnv string `json:"tokenEnv,omitempty"`
 	// BaseURL is the REST API's URL; https://api.github.com when empty.
 	BaseURL string `json:"baseUrl,omitempty"`

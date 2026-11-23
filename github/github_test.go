@@ -3,6 +3,7 @@ package github_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -165,5 +166,29 @@ func TestTokenFromEnv(t *testing.T) {
 	}
 	if _, err := github.TokenFromEnv("UNSET_VARIABLE_FOR_TEST"); err == nil {
 		t.Fatal("an unset variable gave a token")
+	}
+}
+
+func TestTokenFallsBackToGH(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GH_TOKEN", "")
+	t.Setenv("CUSTOM", "")
+	restore := github.SetGHAuthToken(func(context.Context) (string, error) { return "from-gh-cli", nil })
+	defer restore()
+	if v, err := github.Token(context.Background(), ""); err != nil || v != "from-gh-cli" {
+		t.Fatalf("default = %q, %v; want the gh CLI's token", v, err)
+	}
+	if _, err := github.Token(context.Background(), "CUSTOM"); err == nil {
+		t.Fatal("an unset named variable fell back to the gh CLI")
+	}
+	t.Setenv("GH_TOKEN", "from-env")
+	if v, err := github.Token(context.Background(), ""); err != nil || v != "from-env" {
+		t.Fatalf("with GH_TOKEN = %q, %v; want the variable first", v, err)
+	}
+	t.Setenv("GH_TOKEN", "")
+	restore2 := github.SetGHAuthToken(func(context.Context) (string, error) { return "", errors.New("not signed in") })
+	defer restore2()
+	if _, err := github.Token(context.Background(), ""); err == nil {
+		t.Fatal("gh not signed in gave a token")
 	}
 }
