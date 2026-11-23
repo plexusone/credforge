@@ -79,7 +79,6 @@ each store is reached. It holds no secrets:
 Then check:
 
 ```bash
-export GITHUB_TOKEN=$(gh auth token)
 credforge check --registry credentials.json --events events.json --targets targets.json
 ```
 
@@ -113,7 +112,6 @@ live state and decision. **Run live check** adds each store's state from
 the check, and lists the stores no credential names.
 
 ```bash
-export GITHUB_TOKEN=$(gh auth token)
 credforge review --registry credentials.json --events events.json --targets targets.json
 # reviewing at http://127.0.0.1:8484/
 ```
@@ -157,7 +155,7 @@ The live check reads names and dates, never values:
 
 | Store | Credentials | Access needed |
 |---|---|---|
-| GitHub Actions secrets | `GITHUB_TOKEN` or `GH_TOKEN`; `$(gh auth token)` uses your GitHub CLI login | Admin on each repository (GitHub requires it to list secrets) and the `repo` scope; for a fine-grained token, Secrets: read and Contents: read on those repositories |
+| GitHub Actions secrets | `GITHUB_TOKEN` or `GH_TOKEN` when set, otherwise your GitHub CLI sign-in (`gh auth token`) | Admin on each repository (GitHub requires it to list secrets) and the `repo` scope; for a fine-grained token, Secrets: read and Contents: read on those repositories |
 | AWS SSM Parameter Store | The AWS SDK's default credentials, such as `AWS_PROFILE` | `ssm:DescribeParameters` in the region the targets file names |
 
 A store the check cannot reach makes the check fail with the reason; the
@@ -170,7 +168,6 @@ registry lists for it, then records it. It replaces running
 `gh secret set` once per repository and recording the change afterwards.
 
 ```bash
-export GITHUB_TOKEN=$(gh auth token)
 credforge install app/ci/deploy --registry credentials.json --events events.json --targets targets.json
 ```
 

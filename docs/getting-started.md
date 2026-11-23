@@ -19,20 +19,23 @@ go install github.com/plexusone/credforge/cmd/credforge@latest
 ## Write a targets file
 
 The targets file binds each store type and account the registry names to a
-connection. It holds no secrets: a GitHub binding names the environment
+connection. It holds no secrets: a GitHub binding may name the environment
 variable with the token, and an AWS binding names a profile and region.
 
 ```json
 {
   "formatVersion": "1",
   "bindings": [
-    { "store": "github-actions", "account": "example-org/*", "github": { "tokenEnv": "GITHUB_TOKEN" } },
+    { "store": "github-actions", "account": "example-org/*", "github": {} },
     { "store": "aws-ssm", "account": "hosting", "aws": { "profile": "hosting", "region": "us-west-2" } }
   ],
   "scan": { "githubRepositories": ["example-org/web", "example-org/api"] }
 }
 ```
 
+- A GitHub binding without `tokenEnv` uses `GITHUB_TOKEN`, then `GH_TOKEN`,
+  then your GitHub CLI sign-in (`gh auth token`), so signing in with
+  `gh auth login` is enough. With `tokenEnv`, only that variable is used.
 - `account` matches the registry store's account exactly, or as a pattern
   such as `example-org/*`; `*` matches any. The first matching binding wins.
 - A store no binding reaches is `unobserved`, never `missing`.
@@ -45,7 +48,6 @@ variable with the token, and an AWS binding names a profile and region.
 ## Check
 
 ```bash
-export GITHUB_TOKEN=$(gh auth token)
 credforge check --registry credentials.json --events events.json --targets targets.json
 ```
 

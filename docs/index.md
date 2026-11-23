@@ -59,7 +59,6 @@ each store is reached. It holds no secrets:
 Then check:
 
 ```bash
-export GITHUB_TOKEN=$(gh auth token)
 credforge check --registry credentials.json --events events.json --targets targets.json
 ```
 
@@ -91,7 +90,6 @@ registry lists for it, then records it. It replaces running
 `gh secret set` once per repository and recording the change afterwards.
 
 ```bash
-export GITHUB_TOKEN=$(gh auth token)
 credforge install app/ci/deploy --registry credentials.json --events events.json --targets targets.json
 ```
 
