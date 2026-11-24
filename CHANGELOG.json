@@ -9,6 +9,33 @@
   ],
   "releases": [
     {
+      "version": "v0.11.0",
+      "date": "2026-11-23",
+      "highlights": [
+        {
+          "description": "Signing in with the GitHub CLI is enough: check, review and install use gh's token when GITHUB_TOKEN and GH_TOKEN are not set"
+        }
+      ],
+      "added": [
+        {
+          "description": "A GitHub binding without tokenEnv looks in GITHUB_TOKEN, then GH_TOKEN, then asks gh auth token; a binding that names tokenEnv still uses only that variable",
+          "commit": "bfde2ab"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The setup runbook's access section names the GitHub CLI's sign-in and no longer asks for a token export",
+          "commit": "bfde2ab"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The README, overview and getting started drop the token export, and getting started says when the GitHub CLI's sign-in is used",
+          "commit": "7a22a7d"
+        }
+      ]
+    },
+    {
       "version": "v0.10.0",
       "date": "2026-11-22",
       "highlights": [
