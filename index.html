@@ -732,6 +732,34 @@
   
   
     <li class="md-nav__item">
+      <a href="releases/v0.11.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.11.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="releases/v0.10.0/" class="md-nav__link">
         
   
@@ -1276,8 +1304,7 @@ each store is reached. It holds no secrets:</p>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span>
 </code></pre></div>
 <p>Then check:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="k">$(</span>gh<span class="w"> </span>auth<span class="w"> </span>token<span class="k">)</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>credforge<span class="w"> </span>check<span class="w"> </span>--registry<span class="w"> </span>credentials.json<span class="w"> </span>--events<span class="w"> </span>events.json<span class="w"> </span>--targets<span class="w"> </span>targets.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>credforge<span class="w"> </span>check<span class="w"> </span>--registry<span class="w"> </span>credentials.json<span class="w"> </span>--events<span class="w"> </span>events.json<span class="w"> </span>--targets<span class="w"> </span>targets.json
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>listed 3 scope(s): 0 missing, 1 stale, 1 unregistered, 0 changed, 1 unrecorded, 1 unlisted, 1 unobserved, 0 present
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>stale         app/ci/deploy  github-actions:example-org/web:DEPLOY_TOKEN  set 2026-03-01, before the current value was made on 2026-03-11
@@ -1329,8 +1356,7 @@ something is, and 2 on an error.</p>
 <p><code>credforge install</code> sets one credential's value in every store the
 registry lists for it, then records it. It replaces running
 <code>gh secret set</code> once per repository and recording the change afterwards.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="k">$(</span>gh<span class="w"> </span>auth<span class="w"> </span>token<span class="k">)</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>credforge<span class="w"> </span>install<span class="w"> </span>app/ci/deploy<span class="w"> </span>--registry<span class="w"> </span>credentials.json<span class="w"> </span>--events<span class="w"> </span>events.json<span class="w"> </span>--targets<span class="w"> </span>targets.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>credforge<span class="w"> </span>install<span class="w"> </span>app/ci/deploy<span class="w"> </span>--registry<span class="w"> </span>credentials.json<span class="w"> </span>--events<span class="w"> </span>events.json<span class="w"> </span>--targets<span class="w"> </span>targets.json
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>install app/ci/deploy: a new value (rotated), replacing the one made 2026-03-11
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  check  the value against its entitlements before writing
