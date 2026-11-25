@@ -9,6 +9,27 @@
   ],
   "releases": [
     {
+      "version": "v0.11.1",
+      "date": "2026-11-25",
+      "highlights": [
+        {
+          "description": "A credential needed only during a rotation, or optional by its need, is never reported missing, so a check or a deploy preflight no longer fails on a verification secret that exists only mid-rotation"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "Compare reported a credential with need rotation, such as a verification secret, as missing whenever no rotation was under way, and one with need optional unless it was also tagged optional; both are now never missing and reported once a store holds them",
+          "commit": "7bf6db2"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The README and getting started say which credentials are never missing",
+          "commit": "8e6839c"
+        }
+      ]
+    },
+    {
       "version": "v0.11.0",
       "date": "2026-11-23",
       "highlights": [
