@@ -242,3 +242,28 @@ func TestParseStates(t *testing.T) {
 		t.Fatalf("ParseStates(gone) error = %v", err)
 	}
 }
+
+// A credential needed only during another's rotation, or optional by its
+// need, is never missing; it is reported once a store holds it.
+func TestCompareRotationAndOptionalNeedsAreNeverMissing(t *testing.T) {
+	verification := ssm("/app/prod/VERIFY")
+	later := ssm("/app/prod/LATER")
+	stripe := ssm("/app/prod/STRIPE")
+	v := cred("v", credspec.StatusActive, verification)
+	v.Need = credspec.NeedRotation
+	o := cred("o", credspec.StatusActive, stripe)
+	o.Need = credspec.NeedOptional
+	l := cred("l", credspec.StatusActive, later)
+	l.Need = credspec.NeedLater
+	reg := credspec.NewRegistry(v, o, l)
+	scopes := []credforge.Scope{{Type: credspec.StoreAWSSSM, Account: "hosting", Dir: "/app/prod"}}
+
+	rep := credforge.Compare(reg, credspec.NewLog(), scopes, nil, nil, credforge.Options{})
+	equal(t, states(rep), []string{"missing l /app/prod/LATER"})
+
+	rep = credforge.Compare(reg, credspec.NewLog(), scopes, []credforge.Observation{obs(verification, day0)}, nil, credforge.Options{Grace: day})
+	got := states(rep)
+	if len(got) != 2 || !strings.Contains(strings.Join(got, ","), "v /app/prod/VERIFY") {
+		t.Errorf("a stored verification secret is not reported: %v", got)
+	}
+}

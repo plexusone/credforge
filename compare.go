@@ -45,6 +45,14 @@ type Options struct {
 // An observed name no credential stores is unlisted, as is one only a
 // retired credential stores. A reference to a name no credential stores is
 // unregistered; a GitHub Actions reference is also satisfied by an
+// notRequired reports whether a credential may be absent from its stores
+// without being missing: one that is optional, by tag or by need, or one
+// that exists only while another credential rotates, such as a
+// verification secret kept beside a new HMAC secret.
+func notRequired(c credspec.Credential) bool {
+	return slices.Contains(c.Tags, "optional") || c.Need == credspec.NeedOptional || c.Need == credspec.NeedRotation
+}
+
 // organization secret, a store whose account is the repository's owner.
 func Compare(reg *credspec.Registry, log *credspec.Log, scopes []Scope, observations []Observation, references []Reference, o Options) Report {
 	observed := map[Key]Observation{}
@@ -90,7 +98,7 @@ func Compare(reg *credspec.Registry, log *credspec.Log, scopes []Scope, observat
 				f.State = StateUnobserved
 				f.Detail = "no listing covers this store"
 			case !seen:
-				if slices.Contains(c.Tags, "optional") {
+				if notRequired(c) {
 					continue
 				}
 				f.State = StateMissing
