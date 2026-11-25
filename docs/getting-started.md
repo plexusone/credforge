@@ -39,6 +39,9 @@ variable with the token, and an AWS binding names a profile and region.
 - `account` matches the registry store's account exactly, or as a pattern
   such as `example-org/*`; `*` matches any. The first matching binding wins.
 - A store no binding reaches is `unobserved`, never `missing`.
+- A credential that is optional, by tag or by `need`, or needed only while
+  another rotates (`need: rotation`), is never `missing`; once a store
+  holds it, it is reported.
 - `scan.githubRepositories` lists repositories to check even when the
   registry stores nothing there, so a workflow that reads an unknown secret
   is found.

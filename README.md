@@ -45,7 +45,7 @@ changed with nothing recorded.
 
 | State | Meaning |
 |---|---|
-| `missing` | A listed store does not hold the credential |
+| `missing` | A listed store does not hold the credential. A credential that is optional (tag or need) or needed only during a rotation is never missing |
 | `stale` | A store was set before the credential's current value was made |
 | `unregistered` | A workflow reads a secret the registry stores nowhere it can be read |
 | `changed` | A store was set after the log's latest event, with nothing recorded |
