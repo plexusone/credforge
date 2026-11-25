@@ -701,6 +701,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../releases/v0.11.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.11.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../releases/v0.11.0/" class="md-nav__link">
         
   
@@ -1194,6 +1222,9 @@ variable with the token, and an AWS binding names a profile and region.</p>
 <li><code>account</code> matches the registry store's account exactly, or as a pattern
   such as <code>example-org/*</code>; <code>*</code> matches any. The first matching binding wins.</li>
 <li>A store no binding reaches is <code>unobserved</code>, never <code>missing</code>.</li>
+<li>A credential that is optional, by tag or by <code>need</code>, or needed only while
+  another rotates (<code>need: rotation</code>), is never <code>missing</code>; once a store
+  holds it, it is reported.</li>
 <li><code>scan.githubRepositories</code> lists repositories to check even when the
   registry stores nothing there, so a workflow that reads an unknown secret
   is found.</li>
